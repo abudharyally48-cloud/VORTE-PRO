@@ -12,6 +12,10 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.SESSION_PORT || 3001;
 
+// Create required folders if they don't exist
+const TMP_SESSIONS_DIR = path.join(__dirname, 'tmp_sessions');
+if (!fs.existsSync(TMP_SESSIONS_DIR)) fs.mkdirSync(TMP_SESSIONS_DIR, { recursive: true });
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
