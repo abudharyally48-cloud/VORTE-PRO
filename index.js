@@ -15,7 +15,7 @@ const path = require('path');
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'pairing.html'));
 });
-
+  grep -n "SESSION_FOLDER\|mkdirSync\|session 
 // ===== GROUP SETTINGS & WARNINGS =====
 const groupSettings = {};
 const groupWarnings = {};
