@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VORTE PRO — Get Session ID</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #04050a;
+      --surface: #0b0e18;
+      --surface2: #111520;
+      --border: #1a1f35;
+      --border2: #222840;
+      --cyan: #00e5ff;
+      --cyan-glow: rgba(0,229,255,0.12);
+      --cyan-dim: rgba(0,229,255,0.06);
+      --cyan-mid: rgba(0,229,255,0.3);
+      --purple: #7c3aed;
+      --text: #e8eaf6;
+      --text2: #8892b0;
+      --muted: #3d4466;
+      --danger: #ff4466;
+      --success: #00e5a0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .bg-grid {
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none; z-index: 0;
+    }
+
+    .blob { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; }
+    .blob-1 { width:500px;height:500px; background:radial-gradient(circle,rgba(0,229,255,0.07),transparent 70%); top:-150px;left:-100px; animation:drift1 12s ease-in-out infinite; }
+    .blob-2 { width:400px;height:400px; background:radial-gradient(circle,rgba(124,58,237,0.08),transparent 70%); bottom:-100px;right:-100px; animation:drift2 15s ease-in-out infinite; }
+    @keyframes drift1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,30px)} }
+    @keyframes drift2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,-20px)} }
+
+    .page { position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 20px 60px; }
+
+    .header { text-align:center;margin-bottom:44px;animation:fadeDown 0.6s ease both; }
+    .header-chip { display:inline-flex;align-items:center;gap:8px;background:var(--cyan-dim);border:1px solid var(--cyan-mid);border-radius:100px;padding:5px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:22px; }
+    .chip-dot { width:5px;height:5px;border-radius:50%;background:var(--cyan);animation:blink 2s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+    .logo { font-size:clamp(38px,7vw,62px);font-weight:800;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+    .tagline { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.06em; }
+
+    /* Progress */
+    .progress-bar { display:flex;align-items:center;margin-bottom:32px;animation:fadeDown 0.7s 0.1s ease both; }
+    .progress-step { display:flex;flex-direction:column;align-items:center;gap:6px; }
+    .step-circle { width:32px;height:32px;border-radius:50%;border:2px solid var(--border2);background:var(--surface);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);transition:all 0.4s ease;position:relative;z-index:1; }
+    .step-circle.active { border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 16px var(--cyan-glow); }
+    .step-circle.done { border-color:var(--success);background:rgba(0,229,160,0.1);color:var(--success); }
+    .step-label { font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;transition:color 0.4s; }
+    .step-label.active { color:var(--cyan); }
+    .step-label.done { color:var(--success); }
+    .progress-line { width:60px;height:1px;background:var(--border2);margin-bottom:18px;transition:background 0.4s;flex-shrink:0; }
+    .progress-line.done { background:var(--success); }
+
+    /* Card */
+    .card { width:100%;max-width:500px;background:var(--surface);border:1px solid var(--border);border-radius:24px;overflow:hidden;position:relative;animation:fadeUp 0.7s 0.2s ease both; }
+    .card::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,var(--cyan-mid) 50%,transparent 100%); }
+
+    /* Panels */
+    .panel { padding:36px 36px 32px;display:none; }
+    .panel.active { display:block; }
+    .panel-title { font-size:20px;font-weight:700;margin-bottom:6px;letter-spacing:-0.02em; }
+    .panel-sub { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);line-height:1.7;margin-bottom:28px; }
+
+    /* Fields */
+    .field-label { font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:block; }
+    .input-row { display:flex;gap:10px;margin-bottom:20px; }
+    .country-select { background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:12px;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;height:50px;outline:none;cursor:pointer;min-width:96px;flex-shrink:0;transition:border-color 0.2s; }
+    .country-select:focus { border-color:var(--cyan); }
+    .phone-field { flex:1;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:12px;padding:0 16px;font-family:'JetBrains Mono',monospace;font-size:15px;height:50px;outline:none;letter-spacing:0.08em;transition:border-color 0.2s,box-shadow 0.2s; }
+    .phone-field::placeholder { color:var(--muted); }
+    .phone-field:focus { border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-dim); }
+
+    /* Buttons */
+    .btn-primary { width:100%;height:50px;background:var(--cyan);color:#000;border:none;border-radius:12px;font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.15s,box-shadow 0.2s;letter-spacing:0.02em; }
+    .btn-primary:hover:not(:disabled) { transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,229,255,0.3); }
+    .btn-primary:active:not(:disabled) { transform:none; }
+    .btn-primary:disabled { opacity:0.45;cursor:not-allowed; }
+    .btn-outline { background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:10px;padding:8px 18px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:border-color 0.2s,color 0.2s; }
+    .btn-outline:hover { border-color:var(--cyan);color:var(--cyan); }
+
+    .spinner { width:16px;height:16px;border:2px solid rgba(0,0,0,0.25);border-top-color:#000;border-radius:50%;animation:spin 0.6s linear infinite;display:none; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    .alert { padding:12px 16px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;margin-top:16px;display:none; }
+    .alert-error { background:rgba(255,68,102,0.07);border:1px solid rgba(255,68,102,0.2);color:var(--danger); }
+
+    /* Code display */
+    .code-card { background:var(--surface2);border:1px solid var(--border2);border-radius:16px;padding:24px;text-align:center;margin-bottom:24px; }
+    .code-label { font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text2);margin-bottom:16px; }
+    .code-chunks { display:flex;justify-content:center;gap:8px;margin-bottom:16px;flex-wrap:wrap; }
+    .code-chunk { background:linear-gradient(135deg,rgba(0,229,255,0.06),rgba(124,58,237,0.06));border:1px solid var(--cyan-mid);border-radius:10px;padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:600;color:var(--cyan);letter-spacing:0.12em;box-shadow:0 0 24px rgba(0,229,255,0.08);animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .code-chunk:nth-child(1){animation-delay:0s}.code-chunk:nth-child(2){animation-delay:0.07s}
+    @keyframes popIn { from{opacity:0;transform:scale(0.75) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
+    .code-timer { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2); }
+    .code-timer.urgent { color:var(--danger); }
+
+    .code-instructions { font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px; }
+    .code-instructions strong { color:var(--text);font-weight:600; }
+
+    /* Waiting */
+    .waiting-box { background:var(--surface2);border:1px solid var(--border2);border-radius:14px;padding:20px;display:flex;align-items:center;gap:14px;margin-bottom:20px; }
+    .waiting-ring { width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0; }
+    .waiting-text { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);line-height:1.6; }
+    .waiting-text strong { color:var(--text); }
+
+    /* Session ID panel */
+    .session-success { text-align:center;margin-bottom:28px; }
+    .success-icon { width:60px;height:60px;border-radius:50%;background:rgba(0,229,160,0.1);border:2px solid rgba(0,229,160,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px;animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+    .session-id-box { background:var(--surface2);border:1px solid var(--border2);border-radius:14px;padding:20px;margin-bottom:20px;position:relative; }
+    .session-id-label { font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between; }
+    .copy-btn { background:var(--cyan-dim);border:1px solid var(--cyan-mid);color:var(--cyan);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;transition:background 0.2s; }
+    .copy-btn:hover { background:rgba(0,229,255,0.12); }
+    .copy-btn.copied { color:var(--success);border-color:rgba(0,229,160,0.3); }
+    .session-id-value { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan);word-break:break-all;line-height:1.7;max-height:80px;overflow:hidden;position:relative; }
+    .session-id-value::after { content:'';position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,var(--surface2)); }
+
+    .deploy-section { background:linear-gradient(135deg,rgba(0,229,255,0.04),rgba(124,58,237,0.04));border:1px solid var(--border2);border-radius:14px;padding:20px;margin-bottom:20px; }
+    .deploy-title { font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text2);margin-bottom:14px; }
+    .deploy-step { display:flex;gap:12px;margin-bottom:12px;align-items:flex-start; }
+    .deploy-num { flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--cyan-dim);border:1px solid var(--cyan-mid);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);margin-top:1px; }
+    .deploy-text { font-size:12px;color:var(--text2);line-height:1.6; }
+    .deploy-text strong { color:var(--text);font-weight:600; }
+    .deploy-text code { background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan); }
+
+    .new-session-row { display:flex;justify-content:center;margin-top:6px; }
+
+    .footer { margin-top:36px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.06em;text-align:center;animation:fadeUp 0.7s 0.4s ease both; }
+
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-14px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+    @media(max-width:540px) {
+      .panel{padding:24px 20px 22px}
+      .code-chunk{font-size:20px;padding:10px 14px}
+      .progress-line{width:36px}
+    }
+  </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<div class="page">
+
+  <div class="header">
+    <div class="header-chip"><span class="chip-dot"></span>Session Generator</div>
+    <div class="logo">VORTE PRO</div>
+    <div class="tagline">// generate your session id · deploy anywhere</div>
+  </div>
+
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-step">
+      <div class="step-circle active" id="sc1">1</div>
+      <div class="step-label active" id="sl1">Number</div>
+    </div>
+    <div class="progress-line" id="pl1"></div>
+    <div class="progress-step">
+      <div class="step-circle" id="sc2">2</div>
+      <div class="step-label" id="sl2">Verify</div>
+    </div>
+    <div class="progress-line" id="pl2"></div>
+    <div class="progress-step">
+      <div class="step-circle" id="sc3">3</div>
+      <div class="step-label" id="sl3">Session</div>
+    </div>
+  </div>
+
+  <div class="card">
+
+    <!-- PANEL 1: Phone number -->
+    <div class="panel active" id="panel1">
+      <div class="panel-title">Enter Your Number</div>
+      <div class="panel-sub">We'll send a pairing code to your WhatsApp. After linking, you'll get a unique Session ID to deploy your own bot instance.</div>
+
+      <label class="field-label">WhatsApp Number</label>
+      <div class="input-row">
+        <select class="country-select" id="countryCode">
+          <option value="1">🇺🇸 +1</option>
+          <option value="255" selected>🇹🇿 +255</option>
+          <option value="62">🇮🇩 +62</option>
+          <option value="44">🇬🇧 +44</option>
+          <option value="91">🇮🇳 +91</option>
+          <option value="27">🇿🇦 +27</option>
+          <option value="254">🇰🇪 +254</option>
+          <option value="234">🇳🇬 +234</option>
+          <option value="233">🇬🇭 +233</option>
+          <option value="20">🇪🇬 +20</option>
+          <option value="212">🇲🇦 +212</option>
+          <option value="216">🇹🇳 +216</option>
+          <option value="213">🇩🇿 +213</option>
+          <option value="251">🇪🇹 +251</option>
+          <option value="256">🇺🇬 +256</option>
+          <option value="250">🇷🇼 +250</option>
+          <option value="260">🇿🇲 +260</option>
+          <option value="263">🇿🇼 +263</option>
+          <option value="49">🇩🇪 +49</option>
+          <option value="33">🇫🇷 +33</option>
+          <option value="55">🇧🇷 +55</option>
+          <option value="966">🇸🇦 +966</option>
+          <option value="971">🇦🇪 +971</option>
+          <option value="92">🇵🇰 +92</option>
+          <option value="880">🇧🇩 +880</option>
+          <option value="63">🇵🇭 +63</option>
+          <option value="60">🇲🇾 +60</option>
+          <option value="86">🇨🇳 +86</option>
+          <option value="81">🇯🇵 +81</option>
+          <option value="61">🇦🇺 +61</option>
+        </select>
+        <input class="phone-field" id="phoneInput" type="tel" placeholder="7XXXXXXXX" maxlength="12" autocomplete="tel"/>
+      </div>
+
+      <button class="btn-primary" id="requestBtn" onclick="requestCode()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11.5 19.79 19.79 0 0 1 1.61 2.84 2 2 0 0 1 3.6.66h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.24a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <span id="reqBtnText">Get Pairing Code</span>
+        <div class="spinner" id="reqSpinner"></div>
+      </button>
+
+      <div class="alert alert-error" id="step1Error"></div>
+    </div>
+
+    <!-- PANEL 2: Pairing code + waiting -->
+    <div class="panel" id="panel2">
+      <div class="panel-title">Enter Code in WhatsApp</div>
+      <div class="panel-sub">Type this code in WhatsApp. Your Session ID will appear automatically once linked.</div>
+
+      <div class="code-card">
+        <div class="code-label">Your Pairing Code</div>
+        <div class="code-chunks" id="codeChunks"></div>
+        <div class="code-timer" id="codeTimer">⏱ Code expires in 60s</div>
+      </div>
+
+      <div class="code-instructions">
+        <strong>WhatsApp</strong> → <strong>⋮ Menu</strong> → <strong>Linked Devices</strong> → <strong>Link a Device</strong><br>
+        Tap <strong>"Link with phone number instead"</strong> and type the code above.
+      </div>
+
+      <div class="waiting-box">
+        <div class="waiting-ring"></div>
+        <div class="waiting-text">
+          <strong>Waiting for WhatsApp to connect...</strong><br>
+          Your Session ID will be generated automatically once you enter the code.
+        </div>
+      </div>
+
+      <div class="alert alert-error" id="step2Error"></div>
+      <div style="display:flex;justify-content:center;margin-top:4px">
+        <button class="btn-outline" onclick="goBack()">← Try different number</button>
+      </div>
+    </div>
+
+    <!-- PANEL 3: Session ID ready -->
+    <div class="panel" id="panel3">
+      <div class="session-success">
+        <div class="success-icon">🔑</div>
+        <div class="panel-title">Session ID Generated!</div>
+        <div class="panel-sub" style="margin-bottom:0">Your WhatsApp is linked. Copy your Session ID and use it to deploy your own bot instance.</div>
+      </div>
+
+      <div class="session-id-box">
+        <div class="session-id-label">
+          <span>SESSION_ID</span>
+          <button class="copy-btn" id="copyBtn" onclick="copySessionId()">Copy</button>
+        </div>
+        <div class="session-id-value" id="sessionIdValue"></div>
+      </div>
+
+      <div class="deploy-section">
+        <div class="deploy-title">// Deploy your bot</div>
+        <div class="deploy-step">
+          <div class="deploy-num">1</div>
+          <div class="deploy-text">Fork or download the <strong>VORTE PRO bot</strong> and deploy it to Heroku, Railway, Render, or VPS</div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-num">2</div>
+          <div class="deploy-text">Set the environment variable: <code>SESSION_ID</code> = the value you copied above</div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-num">3</div>
+          <div class="deploy-text">Also set <code>OWNER_1</code> to your number, then hit <strong>Deploy</strong> — no QR needed!</div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-num">4</div>
+          <div class="deploy-text">Message your bot number and type <strong>.menu</strong> to confirm it's live 🎉</div>
+        </div>
+      </div>
+
+      <div class="new-session-row">
+        <button class="btn-outline" onclick="resetAll()">⟳ Generate another session</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">VORTE PRO © 2025 &nbsp;·&nbsp; Each session is unique to your WhatsApp number &nbsp;·&nbsp; Keep your Session ID private</div>
+</div>
+
+<script>
+  const API = window.location.origin;
+  let currentToken = null;
+  let pollInterval = null;
+  let timerInterval = null;
+  let currentSessionId = null;
+
+  function goToStep(n) {
+    [1,2,3].forEach(i => {
+      document.getElementById('panel'+i).classList.toggle('active', i===n);
+      const sc = document.getElementById('sc'+i);
+      const sl = document.getElementById('sl'+i);
+      if (i < n) { sc.className='step-circle done'; sc.innerHTML='✓'; sl.className='step-label done'; }
+      else if (i===n) { sc.className='step-circle active'; sl.className='step-label active'; }
+      else { sc.className='step-circle'; sl.className='step-label'; }
+    });
+    document.getElementById('pl1').classList.toggle('done', n>1);
+    document.getElementById('pl2').classList.toggle('done', n>2);
+  }
+
+  function showError(id, msg) { const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
+  function hideError(id) { document.getElementById(id).style.display='none'; }
+
+  async function requestCode() {
+    const cc = document.getElementById('countryCode').value;
+    const num = document.getElementById('phoneInput').value.replace(/\D/g,'');
+    const full = cc + num;
+    hideError('step1Error');
+    if (!num || num.length < 5) return showError('step1Error', 'Please enter a valid phone number.');
+
+    const btn=document.getElementById('requestBtn'), txt=document.getElementById('reqBtnText'), spin=document.getElementById('reqSpinner');
+    btn.disabled=true; txt.textContent='Requesting code...'; spin.style.display='block';
+
+    try {
+      const res = await fetch(`${API}/api/request-code`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ phone: full })
+      });
+      const data = await res.json();
+      if (!data.success) return showError('step1Error', data.error || 'Failed to get pairing code.');
+      currentToken = data.token;
+      showPairingCode(data.code);
+      goToStep(2);
+      startPolling();
+    } catch(e) {
+      showError('step1Error', 'Cannot reach the server. Make sure the session server is running.');
+    } finally {
+      btn.disabled=false; txt.textContent='Get Pairing Code'; spin.style.display='none';
+    }
+  }
+
+  function showPairingCode(code) {
+    const chunks = code.split('-');
+    document.getElementById('codeChunks').innerHTML = chunks.map(c=>`<div class="code-chunk">${c}</div>`).join('');
+    let secs=60;
+    const el=document.getElementById('codeTimer');
+    if(timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(()=>{
+      secs--;
+      el.textContent = secs>0 ? `⏱ Code expires in ${secs}s` : '⚠️ Code expired — go back and try again';
+      el.className = secs<=15 ? 'code-timer urgent' : 'code-timer';
+      if(secs<=0) clearInterval(timerInterval);
+    }, 1000);
+  }
+
+  function startPolling() {
+    if(pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(async ()=>{
+      if(!currentToken) return;
+      try {
+        const res = await fetch(`${API}/api/session-status/${currentToken}`);
+        const data = await res.json();
+        if(!data.success) {
+          clearInterval(pollInterval);
+          return showError('step2Error', data.error || 'Session error. Please try again.');
+        }
+        if(data.status==='ready' && data.sessionId) {
+          clearInterval(pollInterval);
+          if(timerInterval) clearInterval(timerInterval);
+          currentSessionId = data.sessionId;
+          document.getElementById('sessionIdValue').textContent = data.sessionId;
+          goToStep(3);
+        }
+      } catch(e) { /* keep trying */ }
+    }, 2000);
+  }
+
+  async function copySessionId() {
+    if(!currentSessionId) return;
+    try {
+      await navigator.clipboard.writeText(currentSessionId);
+    } catch(e) {
+      const el=document.getElementById('sessionIdValue');
+      const range=document.createRange(); range.selectNode(el);
+      window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+      document.execCommand('copy'); window.getSelection().removeAllRanges();
+    }
+    const btn=document.getElementById('copyBtn');
+    btn.textContent='Copied!'; btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 2500);
+  }
+
+  function goBack() {
+    clearInterval(pollInterval); clearInterval(timerInterval);
+    currentToken=null; hideError('step2Error'); goToStep(1);
+  }
+
+  function resetAll() {
+    clearInterval(pollInterval); clearInterval(timerInterval);
+    currentToken=null; currentSessionId=null;
+    document.getElementById('phoneInput').value='';
+    hideError('step1Error'); goToStep(1);
+  }
+
+  document.getElementById('phoneInput').addEventListener('keydown', e=>{ if(e.key==='Enter') requestCode(); });
+  document.getElementById('phoneInput').addEventListener('input', e=>{ e.target.value=e.target.value.replace(/\D/g,''); });
+</script>
+</body>
+</html>
