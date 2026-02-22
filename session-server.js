@@ -10,7 +10,7 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
-const PORT = process.env.SESSION_PORT || 3001;
+const PORT = process.env.PORT || process.env.SESSION_PORT || 3001;
 
 // Create required folders if they don't exist
 const TMP_SESSIONS_DIR = path.join(__dirname, 'tmp_sessions');
