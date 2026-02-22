@@ -148,17 +148,23 @@ app.post('/api/request-code', async (req, res) => {
     });
 
     // Wait for socket to be ready then request pairing code
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
+    console.log(`📲 Requesting pairing code for +${cleanPhone}...`);
     const pairingCode = await sock.requestPairingCode(cleanPhone);
+    console.log(`📲 Raw pairing code response:`, pairingCode);
+
+    if (!pairingCode) throw new Error('No pairing code returned from WhatsApp');
+
     const formatted = pairingCode?.match(/.{1,4}/g)?.join('-') || pairingCode;
 
-    console.log(`📲 Pairing code for +${cleanPhone}: ${formatted} [token: ${token}]`);
+    console.log(`✅ Pairing code for +${cleanPhone}: ${formatted} [token: ${token}]`);
 
     return res.json({ success: true, code: formatted, token });
 
   } catch (err) {
-    console.error('❌ Pairing code error:', err.message);
+    console.error(`❌ Pairing code error for +${cleanPhone}:`, err.message);
+    console.error('Full error:', err);
     // Cleanup on error
     try {
       const tmpDir = path.join(__dirname, 'tmp_sessions', token);
