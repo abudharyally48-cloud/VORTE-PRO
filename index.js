@@ -208,7 +208,7 @@ async function startWhatsAppBot() {
       DisconnectReason,
       fetchLatestBaileysVersion,
       makeCacheableSignalKeyStore,
-    } = require("@whiskeysockets/baileys");
+    } = require("baileys");
 
     const P = require("pino");
     const fs = require("fs");
