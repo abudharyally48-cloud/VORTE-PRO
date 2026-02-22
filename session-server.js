@@ -69,7 +69,7 @@ app.post('/api/request-code', async (req, res) => {
       fetchLatestBaileysVersion,
       makeCacheableSignalKeyStore,
       DisconnectReason
-    } = require('@whiskeysockets/baileys');
+    } = require('baileys');
     const P = require('pino');
 
     const { state, saveCreds } = await useMultiFileAuthState(tmpDir);
@@ -79,11 +79,13 @@ app.post('/api/request-code', async (req, res) => {
       version,
       logger: P({ level: 'silent' }),
       printQRInTerminal: false,
-      browser: ['VORTE PRO', 'Chrome', '1.0.0'],
+      browser: ['Ubuntu', 'Chrome', '22.0.0.0'],
       auth: {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, P({ level: 'silent' })),
       },
+      fetchAgent: null,
+      fireInitQueries: false,
     });
 
     // Store session
@@ -148,10 +150,15 @@ app.post('/api/request-code', async (req, res) => {
     });
 
     // Wait for socket to be ready then request pairing code
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log(`⏳ Waiting for socket to be ready...`);
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     console.log(`📲 Requesting pairing code for +${cleanPhone}...`);
     const pairingCode = await sock.requestPairingCode(cleanPhone);
+
+    // Delay after requesting to let WhatsApp process
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     console.log(`📲 Raw pairing code response:`, pairingCode);
 
     if (!pairingCode) throw new Error('No pairing code returned from WhatsApp');
@@ -245,3 +252,4 @@ app.listen(PORT, '0.0.0.0', () => {
 
 process.on('uncaughtException', err => console.error('Uncaught:', err.message));
 process.on('unhandledRejection', reason => console.error('Unhandled rejection:', reason));
+  
