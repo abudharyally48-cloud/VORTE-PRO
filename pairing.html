@@ -1,439 +1,529 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="htmlRoot">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VORTE PRO — Get Session ID</title>
+  <title>VORTE PRO // SESSION GENERATOR</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #04050a;
-      --surface: #0b0e18;
-      --surface2: #111520;
-      --border: #1a1f35;
-      --border2: #222840;
-      --cyan: #00e5ff;
-      --cyan-glow: rgba(0,229,255,0.12);
-      --cyan-dim: rgba(0,229,255,0.06);
-      --cyan-mid: rgba(0,229,255,0.3);
-      --purple: #7c3aed;
-      --text: #e8eaf6;
-      --text2: #8892b0;
-      --muted: #3d4466;
-      --danger: #ff4466;
-      --success: #00e5a0;
+      --bg:#020408; --bg2:#040810; --surface:rgba(0,20,40,0.8);
+      --border:rgba(0,180,255,0.12); --border2:rgba(0,180,255,0.25);
+      --blue:#00b4ff; --blue-bright:#00d4ff; --blue-dim:rgba(0,180,255,0.08); --blue-glow:rgba(0,180,255,0.2);
+      --green:#00ff88; --green-dim:rgba(0,255,136,0.08); --green-glow:rgba(0,255,136,0.15);
+      --red:#ff3355; --text:#c8e8ff; --text2:#5a8aaa; --muted:#2a4a5a;
     }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      min-height: 100vh;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Outfit', sans-serif;
-      overflow-x: hidden;
-    }
-
-    .bg-grid {
-      position: fixed; inset: 0;
-      background-image:
-        linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
-      background-size: 50px 50px;
-      pointer-events: none; z-index: 0;
-    }
-
-    .blob { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; }
-    .blob-1 { width:500px;height:500px; background:radial-gradient(circle,rgba(0,229,255,0.07),transparent 70%); top:-150px;left:-100px; animation:drift1 12s ease-in-out infinite; }
-    .blob-2 { width:400px;height:400px; background:radial-gradient(circle,rgba(124,58,237,0.08),transparent 70%); bottom:-100px;right:-100px; animation:drift2 15s ease-in-out infinite; }
-    @keyframes drift1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,30px)} }
-    @keyframes drift2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,-20px)} }
-
-    .page { position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 20px 60px; }
-
-    .header { text-align:center;margin-bottom:44px;animation:fadeDown 0.6s ease both; }
-    .header-chip { display:inline-flex;align-items:center;gap:8px;background:var(--cyan-dim);border:1px solid var(--cyan-mid);border-radius:100px;padding:5px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:22px; }
-    .chip-dot { width:5px;height:5px;border-radius:50%;background:var(--cyan);animation:blink 2s ease-in-out infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
-    .logo { font-size:clamp(38px,7vw,62px);font-weight:800;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
-    .tagline { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.06em; }
-
-    /* Progress */
-    .progress-bar { display:flex;align-items:center;margin-bottom:32px;animation:fadeDown 0.7s 0.1s ease both; }
-    .progress-step { display:flex;flex-direction:column;align-items:center;gap:6px; }
-    .step-circle { width:32px;height:32px;border-radius:50%;border:2px solid var(--border2);background:var(--surface);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);transition:all 0.4s ease;position:relative;z-index:1; }
-    .step-circle.active { border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 16px var(--cyan-glow); }
-    .step-circle.done { border-color:var(--success);background:rgba(0,229,160,0.1);color:var(--success); }
-    .step-label { font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;transition:color 0.4s; }
-    .step-label.active { color:var(--cyan); }
-    .step-label.done { color:var(--success); }
-    .progress-line { width:60px;height:1px;background:var(--border2);margin-bottom:18px;transition:background 0.4s;flex-shrink:0; }
-    .progress-line.done { background:var(--success); }
-
-    /* Card */
-    .card { width:100%;max-width:500px;background:var(--surface);border:1px solid var(--border);border-radius:24px;overflow:hidden;position:relative;animation:fadeUp 0.7s 0.2s ease both; }
-    .card::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,var(--cyan-mid) 50%,transparent 100%); }
-
-    /* Panels */
-    .panel { padding:36px 36px 32px;display:none; }
-    .panel.active { display:block; }
-    .panel-title { font-size:20px;font-weight:700;margin-bottom:6px;letter-spacing:-0.02em; }
-    .panel-sub { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);line-height:1.7;margin-bottom:28px; }
-
-    /* Fields */
-    .field-label { font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:block; }
-    .input-row { display:flex;gap:10px;margin-bottom:20px; }
-    .country-select { background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:12px;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12px;height:50px;outline:none;cursor:pointer;min-width:96px;flex-shrink:0;transition:border-color 0.2s; }
-    .country-select:focus { border-color:var(--cyan); }
-    .phone-field { flex:1;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:12px;padding:0 16px;font-family:'JetBrains Mono',monospace;font-size:15px;height:50px;outline:none;letter-spacing:0.08em;transition:border-color 0.2s,box-shadow 0.2s; }
-    .phone-field::placeholder { color:var(--muted); }
-    .phone-field:focus { border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-dim); }
-
-    /* Buttons */
-    .btn-primary { width:100%;height:50px;background:var(--cyan);color:#000;border:none;border-radius:12px;font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.15s,box-shadow 0.2s;letter-spacing:0.02em; }
-    .btn-primary:hover:not(:disabled) { transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,229,255,0.3); }
-    .btn-primary:active:not(:disabled) { transform:none; }
-    .btn-primary:disabled { opacity:0.45;cursor:not-allowed; }
-    .btn-outline { background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:10px;padding:8px 18px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:border-color 0.2s,color 0.2s; }
-    .btn-outline:hover { border-color:var(--cyan);color:var(--cyan); }
-
-    .spinner { width:16px;height:16px;border:2px solid rgba(0,0,0,0.25);border-top-color:#000;border-radius:50%;animation:spin 0.6s linear infinite;display:none; }
-    @keyframes spin { to{transform:rotate(360deg)} }
-
-    .alert { padding:12px 16px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;margin-top:16px;display:none; }
-    .alert-error { background:rgba(255,68,102,0.07);border:1px solid rgba(255,68,102,0.2);color:var(--danger); }
-
-    /* Code display */
-    .code-card { background:var(--surface2);border:1px solid var(--border2);border-radius:16px;padding:24px;text-align:center;margin-bottom:24px; }
-    .code-label { font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text2);margin-bottom:16px; }
-    .code-chunks { display:flex;justify-content:center;gap:8px;margin-bottom:16px;flex-wrap:wrap; }
-    .code-chunk { background:linear-gradient(135deg,rgba(0,229,255,0.06),rgba(124,58,237,0.06));border:1px solid var(--cyan-mid);border-radius:10px;padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:600;color:var(--cyan);letter-spacing:0.12em;box-shadow:0 0 24px rgba(0,229,255,0.08);animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
-    .code-chunk:nth-child(1){animation-delay:0s}.code-chunk:nth-child(2){animation-delay:0.07s}
-    @keyframes popIn { from{opacity:0;transform:scale(0.75) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
-    .code-timer { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2); }
-    .code-timer.urgent { color:var(--danger); }
-
-    .code-instructions { font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px; }
-    .code-instructions strong { color:var(--text);font-weight:600; }
-
-    /* Waiting */
-    .waiting-box { background:var(--surface2);border:1px solid var(--border2);border-radius:14px;padding:20px;display:flex;align-items:center;gap:14px;margin-bottom:20px; }
-    .waiting-ring { width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0; }
-    .waiting-text { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);line-height:1.6; }
-    .waiting-text strong { color:var(--text); }
-
-    /* Session ID panel */
-    .session-success { text-align:center;margin-bottom:28px; }
-    .success-icon { width:60px;height:60px;border-radius:50%;background:rgba(0,229,160,0.1);border:2px solid rgba(0,229,160,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px;animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
-
-    .session-id-box { background:var(--surface2);border:1px solid var(--border2);border-radius:14px;padding:20px;margin-bottom:20px;position:relative; }
-    .session-id-label { font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between; }
-    .copy-btn { background:var(--cyan-dim);border:1px solid var(--cyan-mid);color:var(--cyan);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;transition:background 0.2s; }
-    .copy-btn:hover { background:rgba(0,229,255,0.12); }
-    .copy-btn.copied { color:var(--success);border-color:rgba(0,229,160,0.3); }
-    .session-id-value { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan);word-break:break-all;line-height:1.7;max-height:80px;overflow:hidden;position:relative; }
-    .session-id-value::after { content:'';position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,var(--surface2)); }
-
-    .deploy-section { background:linear-gradient(135deg,rgba(0,229,255,0.04),rgba(124,58,237,0.04));border:1px solid var(--border2);border-radius:14px;padding:20px;margin-bottom:20px; }
-    .deploy-title { font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text2);margin-bottom:14px; }
-    .deploy-step { display:flex;gap:12px;margin-bottom:12px;align-items:flex-start; }
-    .deploy-num { flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--cyan-dim);border:1px solid var(--cyan-mid);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);margin-top:1px; }
-    .deploy-text { font-size:12px;color:var(--text2);line-height:1.6; }
-    .deploy-text strong { color:var(--text);font-weight:600; }
-    .deploy-text code { background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan); }
-
-    .new-session-row { display:flex;justify-content:center;margin-top:6px; }
-
-    .footer { margin-top:36px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.06em;text-align:center;animation:fadeUp 0.7s 0.4s ease both; }
-
-    @keyframes fadeDown { from{opacity:0;transform:translateY(-14px)} to{opacity:1;transform:translateY(0)} }
-    @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-
-    @media(max-width:540px) {
-      .panel{padding:24px 20px 22px}
-      .code-chunk{font-size:20px;padding:10px 14px}
-      .progress-line{width:36px}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;overflow:hidden}
+    body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.03) 0px,rgba(0,0,0,0.03) 1px,transparent 1px,transparent 3px);pointer-events:none;z-index:1000;opacity:0.4}
+    .hex-bg{position:fixed;inset:0;opacity:0.03;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V16L28 0l28 16v34L28 66zm0-2l26-15V18L28 2 2 18v30L28 64z' fill='%2300b4ff'/%3E%3C/svg%3E");background-size:56px 100px;pointer-events:none;z-index:0}
+    #matrixCanvas{position:fixed;inset:0;opacity:0.025;z-index:0;pointer-events:none}
+    .corner{position:fixed;width:60px;height:60px;z-index:5;pointer-events:none}
+    .corner-tl{top:12px;left:12px;border-top:2px solid var(--blue);border-left:2px solid var(--blue)}
+    .corner-tr{top:12px;right:12px;border-top:2px solid var(--blue);border-right:2px solid var(--blue)}
+    .corner-bl{bottom:28px;left:12px;border-bottom:2px solid var(--blue);border-left:2px solid var(--blue)}
+    .corner-br{bottom:28px;right:12px;border-bottom:2px solid var(--blue);border-right:2px solid var(--blue)}
+    .dashboard{position:relative;z-index:10;display:grid;grid-template-columns:260px 1fr;grid-template-rows:52px 1fr 28px;height:100vh}
+    .topbar{grid-column:1/-1;background:rgba(0,10,20,0.95);border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;padding:0 20px;backdrop-filter:blur(10px)}
+    .topbar-left{display:flex;align-items:center;gap:16px}
+    .logo-text{font-family:'Orbitron',monospace;font-size:16px;font-weight:900;letter-spacing:0.15em;color:var(--blue-bright);text-shadow:0 0 20px var(--blue-glow),0 0 40px rgba(0,180,255,0.1);position:relative}
+    .logo-text::after{content:attr(data-text);position:absolute;left:2px;top:0;color:var(--green);opacity:0;animation:glitch 4s infinite}
+    @keyframes glitch{0%,95%,100%{opacity:0;transform:none}96%{opacity:0.6;transform:translate(-2px,1px)}97%{opacity:0.6;transform:translate(2px,-1px)}98%{opacity:0}}
+    .logo-version{font-size:9px;color:var(--text2);letter-spacing:0.2em;border:1px solid var(--border2);padding:2px 6px;border-radius:2px}
+    .topbar-right{display:flex;align-items:center;gap:20px}
+    .top-stat{font-size:10px;color:var(--text2);letter-spacing:0.08em;display:flex;align-items:center;gap:6px}
+    .top-stat-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse-dot 2s ease-in-out infinite}
+    .top-stat-dot.orange{background:#ff8800;box-shadow:0 0 8px #ff8800}
+    @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.3}}
+    .lang-select{background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 6px;cursor:pointer;outline:none;border-radius:2px;letter-spacing:0.08em}
+    .lang-select option{background:#020408}
+    .sidebar{background:rgba(0,8,16,0.9);border-right:1px solid var(--border);padding:20px 0;display:flex;flex-direction:column;overflow-y:auto;backdrop-filter:blur(10px)}
+    .sidebar-section{padding:0 16px 16px;border-bottom:1px solid var(--border);margin-bottom:4px}
+    .sidebar-label{font-size:9px;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;padding-top:8px}
+    .step-nav{display:flex;flex-direction:column;gap:4px}
+    .step-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:3px;border:1px solid transparent;transition:background 0.2s}
+    .step-item.active{background:var(--blue-dim);border-color:var(--border2)}
+    .step-code{font-size:10px;color:var(--green);letter-spacing:0.1em;min-width:36px}
+    .step-name{font-size:11px;color:var(--text2);letter-spacing:0.08em}
+    .step-item.active .step-name{color:var(--blue-bright)}
+    .step-check{margin-left:auto;font-size:10px;color:var(--green);display:none}
+    .step-item.done .step-check{display:block}
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .stat-box{background:var(--blue-dim);border:1px solid var(--border);border-radius:3px;padding:8px}
+    .stat-val{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--blue-bright);margin-bottom:2px}
+    .stat-lbl{font-size:9px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase}
+    .sys-line{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:10px}
+    .sys-key{color:var(--muted);letter-spacing:0.08em}
+    .sys-val{color:var(--text2);letter-spacing:0.05em}
+    .sys-val.green{color:var(--green)}
+    .sys-val.blue{color:var(--blue-bright)}
+    .main{padding:24px;overflow-y:auto;display:flex;flex-direction:column}
+    .terminal{background:rgba(0,8,16,0.9);border:1px solid var(--border2);border-radius:4px;flex:1;display:flex;flex-direction:column;backdrop-filter:blur(10px);box-shadow:0 0 40px rgba(0,180,255,0.05)}
+    .terminal-bar{background:rgba(0,15,30,0.95);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:12px}
+    .term-dots{display:flex;gap:5px}
+    .term-dot{width:8px;height:8px;border-radius:50%}
+    .td-red{background:#ff3b30}.td-yellow{background:#ffcc00}.td-green{background:#28cd41}
+    .term-title{font-size:10px;color:var(--text2);letter-spacing:0.15em;flex:1;text-align:center}
+    .terminal-body{padding:24px;flex:1;overflow-y:auto}
+    .panel{display:none}
+    .panel.active{display:block}
+    .cmd-line{font-size:11px;color:var(--text2);letter-spacing:0.08em;margin-bottom:4px;display:flex;gap:8px}
+    .cmd-prompt{color:var(--green)}.cmd-path{color:var(--blue)}.cmd-text{color:var(--text)}
+    .cmd-output{font-family:'Orbitron',monospace;font-size:clamp(18px,3vw,28px);font-weight:900;letter-spacing:0.08em;color:var(--blue-bright);text-shadow:0 0 30px var(--blue-glow);margin:8px 0 4px;line-height:1.2}
+    .cmd-sub{font-size:11px;color:var(--text2);letter-spacing:0.1em;margin-bottom:20px}
+    .cursor{display:inline-block;width:8px;height:16px;background:var(--blue-bright);animation:blink-cursor 1s step-end infinite;vertical-align:middle;margin-left:2px}
+    @keyframes blink-cursor{0%,100%{opacity:1}50%{opacity:0}}
+    .term-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border2),transparent);margin:16px 0}
+    .field-group{margin-bottom:16px}
+    .field-label{font-size:10px;letter-spacing:0.15em;color:var(--text2);text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+    .field-label::before{content:'//';color:var(--green);font-size:10px}
+    .search-input{width:100%;background:var(--blue-dim);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;padding:9px 12px;outline:none;border-radius:2px;margin-bottom:8px;letter-spacing:0.05em;transition:border-color 0.2s,box-shadow 0.2s}
+    .search-input:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-dim)}
+    .search-input::placeholder{color:var(--muted)}
+    .input-row{display:flex;gap:8px}
+    .country-select{background:var(--blue-dim);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;padding:0 10px;height:44px;outline:none;cursor:pointer;min-width:130px;flex-shrink:0;border-radius:2px;transition:border-color 0.2s}
+    .country-select:focus{border-color:var(--blue)}
+    .country-select optgroup{background:#020408;color:var(--text2)}
+    .country-select option{background:#020408;color:var(--text)}
+    .phone-input{flex:1;background:var(--blue-dim);border:1px solid var(--border);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:18px;padding:0 14px;height:44px;outline:none;border-radius:2px;letter-spacing:0.15em;transition:border-color 0.2s,box-shadow 0.2s}
+    .phone-input::placeholder{color:var(--muted);font-size:14px}
+    .phone-input:focus{border-color:var(--green);box-shadow:0 0 0 2px var(--green-dim)}
+    .exec-btn{display:flex;align-items:center;gap:10px;background:transparent;border:1px solid var(--blue);color:var(--blue-bright);font-family:'Share Tech Mono',monospace;font-size:13px;padding:10px 20px;cursor:pointer;letter-spacing:0.15em;transition:all 0.2s;position:relative;overflow:hidden;border-radius:2px;margin-top:4px}
+    .exec-btn::before{content:'';position:absolute;inset:0;background:var(--blue);transform:translateX(-100%);transition:transform 0.3s ease;z-index:0}
+    .exec-btn:hover::before{transform:translateX(0)}
+    .exec-btn:hover{color:#000}
+    .exec-btn span,.exec-btn svg{position:relative;z-index:1}
+    .exec-btn:disabled{opacity:0.4;cursor:not-allowed}
+    .exec-btn:disabled::before{display:none}
+    .btn-spinner{width:12px;height:12px;border:1.5px solid rgba(0,180,255,0.3);border-top-color:var(--blue-bright);border-radius:50%;animation:spin 0.6s linear infinite;display:none;position:relative;z-index:1}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .term-error{background:rgba(255,51,85,0.07);border:1px solid rgba(255,51,85,0.25);color:var(--red);font-size:11px;padding:10px 14px;border-radius:2px;margin-top:12px;display:none;letter-spacing:0.05em}
+    .term-error::before{content:'[ERROR] ';color:var(--red);opacity:0.6}
+    .code-display{background:var(--blue-dim);border:1px solid var(--border2);border-radius:3px;padding:20px;text-align:center;margin-bottom:16px;position:relative}
+    .code-display::before{content:'CLASSIFIED // AUTH CODE';position:absolute;top:-1px;left:16px;font-size:8px;letter-spacing:0.2em;color:var(--blue);background:var(--bg);padding:0 6px;transform:translateY(-50%)}
+    .code-chunks{display:flex;justify-content:center;gap:6px;margin-bottom:12px}
+    .code-chunk{background:rgba(0,0,0,0.4);border:1px solid var(--blue);padding:10px 14px;font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:var(--blue-bright);letter-spacing:0.15em;box-shadow:0 0 20px rgba(0,180,255,0.1),inset 0 0 20px rgba(0,0,0,0.3);animation:decrypt 0.4s steps(4) both;border-radius:2px}
+    .code-chunk:nth-child(2){animation-delay:0.1s}
+    @keyframes decrypt{0%{filter:blur(4px);opacity:0;transform:scale(0.9)}100%{filter:none;opacity:1;transform:scale(1)}}
+    .code-timer{font-size:10px;color:var(--text2);letter-spacing:0.15em}
+    .code-timer.urgent{color:var(--red)}
+    .instructions-box{background:var(--green-dim);border:1px solid rgba(0,255,136,0.15);border-radius:2px;padding:12px 14px;margin-bottom:14px;font-size:11px;color:var(--text2);line-height:1.8;letter-spacing:0.04em}
+    .instructions-box .hl{color:var(--green)}
+    .waiting-indicator{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--blue-dim);border:1px solid var(--border);border-radius:2px;margin-bottom:12px}
+    .wait-ring{width:20px;height:20px;border:1.5px solid var(--border2);border-top-color:var(--blue-bright);border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0}
+    .wait-text{font-size:10px;color:var(--text2);letter-spacing:0.1em}
+    .wait-text strong{color:var(--blue-bright)}
+    .success-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .success-badge{background:var(--green-dim);border:1px solid rgba(0,255,136,0.25);color:var(--green);font-size:10px;letter-spacing:0.15em;padding:4px 10px;border-radius:2px}
+    .success-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--green);letter-spacing:0.1em;text-shadow:0 0 20px var(--green-glow)}
+    .session-box{background:rgba(0,0,0,0.4);border:1px solid var(--border2);border-radius:3px;padding:16px;margin-bottom:14px;position:relative}
+    .session-box::before{content:'SESSION_ID // KEEP PRIVATE';position:absolute;top:-1px;left:14px;font-size:8px;letter-spacing:0.2em;color:var(--green);background:var(--bg);padding:0 6px;transform:translateY(-50%)}
+    .session-id-row{display:flex;align-items:flex-start;gap:10px}
+    .session-id-text{flex:1;font-size:10px;color:var(--green);word-break:break-all;line-height:1.8;letter-spacing:0.04em;max-height:72px;overflow:hidden;position:relative}
+    .session-id-text::after{content:'';position:absolute;bottom:0;left:0;right:0;height:24px;background:linear-gradient(transparent,rgba(0,0,0,0.4))}
+    .copy-btn{flex-shrink:0;background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 10px;cursor:pointer;letter-spacing:0.1em;transition:all 0.2s;border-radius:2px}
+    .copy-btn:hover,.copy-btn.copied{border-color:var(--green);color:var(--green)}
+    .deploy-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+    .deploy-card{background:var(--blue-dim);border:1px solid var(--border);border-radius:3px;padding:12px;transition:border-color 0.2s}
+    .deploy-card:hover{border-color:var(--blue)}
+    .deploy-num{font-family:'Orbitron',monospace;font-size:18px;font-weight:900;color:var(--blue);opacity:0.4;margin-bottom:4px}
+    .deploy-text{font-size:11px;color:var(--text2);line-height:1.5;letter-spacing:0.03em}
+    .deploy-text strong{color:var(--text);font-weight:600}
+    .deploy-text code{background:rgba(0,0,0,0.4);border:1px solid var(--border);padding:1px 5px;color:var(--green);font-size:10px;border-radius:2px}
+    .new-sess-btn{background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'Share Tech Mono',monospace;font-size:11px;padding:8px 16px;cursor:pointer;letter-spacing:0.1em;transition:all 0.2s;border-radius:2px}
+    .new-sess-btn:hover{border-color:var(--blue);color:var(--blue)}
+    .statusbar{grid-column:1/-1;background:rgba(0,10,20,0.98);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:20px;font-size:10px;color:var(--muted);letter-spacing:0.08em}
+    .sb-item{display:flex;align-items:center;gap:6px}
+    .sb-item.highlight{color:var(--blue)}
+    .sb-item.green{color:var(--green)}
+    .sb-sep{color:var(--border2)}
+    @media(max-width:700px){
+      html,body{overflow:auto}
+      .dashboard{grid-template-columns:1fr;grid-template-rows:52px auto 1fr 28px;height:auto;min-height:100vh}
+      .sidebar{border-right:none;border-bottom:1px solid var(--border);padding:10px 0;flex-direction:row;flex-wrap:wrap}
+      .sidebar-section{border-bottom:none;padding:8px 12px;flex:1;min-width:140px}
+      .deploy-grid{grid-template-columns:1fr}
+      .corner{display:none}
     }
   </style>
 </head>
 <body>
-<div class="bg-grid"></div>
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
+<canvas id="matrixCanvas"></canvas>
+<div class="hex-bg"></div>
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
 
-<div class="page">
-
-  <div class="header">
-    <div class="header-chip"><span class="chip-dot"></span>Session Generator</div>
-    <div class="logo">VORTE PRO</div>
-    <div class="tagline">// generate your session id · deploy anywhere</div>
-  </div>
-
-  <div class="progress-bar" id="progressBar">
-    <div class="progress-step">
-      <div class="step-circle active" id="sc1">1</div>
-      <div class="step-label active" id="sl1">Number</div>
+<div class="dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo-text" data-text="VORTE PRO">VORTE PRO</div>
+      <div class="logo-version">v2.0.0</div>
     </div>
-    <div class="progress-line" id="pl1"></div>
-    <div class="progress-step">
-      <div class="step-circle" id="sc2">2</div>
-      <div class="step-label" id="sl2">Verify</div>
-    </div>
-    <div class="progress-line" id="pl2"></div>
-    <div class="progress-step">
-      <div class="step-circle" id="sc3">3</div>
-      <div class="step-label" id="sl3">Session</div>
+    <div class="topbar-right">
+      <div class="top-stat"><span class="top-stat-dot"></span><span id="serverStatus">SERVER ONLINE</span></div>
+      <div class="top-stat"><span class="top-stat-dot orange"></span><span id="sessionCount">0 ACTIVE</span></div>
+      <div class="top-stat">⏱ <span id="uptimeStat">--:--</span></div>
+      <select class="lang-select" id="langSelect" onchange="setLang(this.value)">
+        <option value="en">🇬🇧 EN</option><option value="sw">🇹🇿 SW</option><option value="ar">🇸🇦 AR</option>
+        <option value="fr">🇫🇷 FR</option><option value="pt">🇧🇷 PT</option><option value="hi">🇮🇳 HI</option>
+        <option value="id">🇮🇩 ID</option><option value="tr">🇹🇷 TR</option>
+      </select>
     </div>
   </div>
 
-  <div class="card">
-
-    <!-- PANEL 1: Phone number -->
-    <div class="panel active" id="panel1">
-      <div class="panel-title">Enter Your Number</div>
-      <div class="panel-sub">We'll send a pairing code to your WhatsApp. After linking, you'll get a unique Session ID to deploy your own bot instance.</div>
-
-      <label class="field-label">WhatsApp Number</label>
-      <div class="input-row">
-        <select class="country-select" id="countryCode">
-          <option value="1">🇺🇸 +1</option>
-          <option value="255" selected>🇹🇿 +255</option>
-          <option value="62">🇮🇩 +62</option>
-          <option value="44">🇬🇧 +44</option>
-          <option value="91">🇮🇳 +91</option>
-          <option value="27">🇿🇦 +27</option>
-          <option value="254">🇰🇪 +254</option>
-          <option value="234">🇳🇬 +234</option>
-          <option value="233">🇬🇭 +233</option>
-          <option value="20">🇪🇬 +20</option>
-          <option value="212">🇲🇦 +212</option>
-          <option value="216">🇹🇳 +216</option>
-          <option value="213">🇩🇿 +213</option>
-          <option value="251">🇪🇹 +251</option>
-          <option value="256">🇺🇬 +256</option>
-          <option value="250">🇷🇼 +250</option>
-          <option value="260">🇿🇲 +260</option>
-          <option value="263">🇿🇼 +263</option>
-          <option value="49">🇩🇪 +49</option>
-          <option value="33">🇫🇷 +33</option>
-          <option value="55">🇧🇷 +55</option>
-          <option value="966">🇸🇦 +966</option>
-          <option value="971">🇦🇪 +971</option>
-          <option value="92">🇵🇰 +92</option>
-          <option value="880">🇧🇩 +880</option>
-          <option value="63">🇵🇭 +63</option>
-          <option value="60">🇲🇾 +60</option>
-          <option value="86">🇨🇳 +86</option>
-          <option value="81">🇯🇵 +81</option>
-          <option value="61">🇦🇺 +61</option>
-        </select>
-        <input class="phone-field" id="phoneInput" type="tel" placeholder="7XXXXXXXX" maxlength="12" autocomplete="tel"/>
-      </div>
-
-      <button class="btn-primary" id="requestBtn" onclick="requestCode()">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11.5 19.79 19.79 0 0 1 1.61 2.84 2 2 0 0 1 3.6.66h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.24a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-        <span id="reqBtnText">Get Pairing Code</span>
-        <div class="spinner" id="reqSpinner"></div>
-      </button>
-
-      <div class="alert alert-error" id="step1Error"></div>
-    </div>
-
-    <!-- PANEL 2: Pairing code + waiting -->
-    <div class="panel" id="panel2">
-      <div class="panel-title">Enter Code in WhatsApp</div>
-      <div class="panel-sub">Type this code in WhatsApp. Your Session ID will appear automatically once linked.</div>
-
-      <div class="code-card">
-        <div class="code-label">Your Pairing Code</div>
-        <div class="code-chunks" id="codeChunks"></div>
-        <div class="code-timer" id="codeTimer">⏱ Code expires in 60s</div>
-      </div>
-
-      <div class="code-instructions">
-        <strong>WhatsApp</strong> → <strong>⋮ Menu</strong> → <strong>Linked Devices</strong> → <strong>Link a Device</strong><br>
-        Tap <strong>"Link with phone number instead"</strong> and type the code above.
-      </div>
-
-      <div class="waiting-box">
-        <div class="waiting-ring"></div>
-        <div class="waiting-text">
-          <strong>Waiting for WhatsApp to connect...</strong><br>
-          Your Session ID will be generated automatically once you enter the code.
-        </div>
-      </div>
-
-      <div class="alert alert-error" id="step2Error"></div>
-      <div style="display:flex;justify-content:center;margin-top:4px">
-        <button class="btn-outline" onclick="goBack()">← Try different number</button>
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">// PROCESS</div>
+      <div class="step-nav">
+        <div class="step-item active" id="sideStep1"><span class="step-code">[01]</span><span class="step-name" data-i18n="step1">IDENTIFY</span><span class="step-check">✓</span></div>
+        <div class="step-item" id="sideStep2"><span class="step-code">[02]</span><span class="step-name" data-i18n="step2">AUTHENTICATE</span><span class="step-check">✓</span></div>
+        <div class="step-item" id="sideStep3"><span class="step-code">[03]</span><span class="step-name" data-i18n="step3">DEPLOY</span><span class="step-check">✓</span></div>
       </div>
     </div>
-
-    <!-- PANEL 3: Session ID ready -->
-    <div class="panel" id="panel3">
-      <div class="session-success">
-        <div class="success-icon">🔑</div>
-        <div class="panel-title">Session ID Generated!</div>
-        <div class="panel-sub" style="margin-bottom:0">Your WhatsApp is linked. Copy your Session ID and use it to deploy your own bot instance.</div>
-      </div>
-
-      <div class="session-id-box">
-        <div class="session-id-label">
-          <span>SESSION_ID</span>
-          <button class="copy-btn" id="copyBtn" onclick="copySessionId()">Copy</button>
-        </div>
-        <div class="session-id-value" id="sessionIdValue"></div>
-      </div>
-
-      <div class="deploy-section">
-        <div class="deploy-title">// Deploy your bot</div>
-        <div class="deploy-step">
-          <div class="deploy-num">1</div>
-          <div class="deploy-text">Fork or download the <strong>VORTE PRO bot</strong> and deploy it to Heroku, Railway, Render, or VPS</div>
-        </div>
-        <div class="deploy-step">
-          <div class="deploy-num">2</div>
-          <div class="deploy-text">Set the environment variable: <code>SESSION_ID</code> = the value you copied above</div>
-        </div>
-        <div class="deploy-step">
-          <div class="deploy-num">3</div>
-          <div class="deploy-text">Also set <code>OWNER_1</code> to your number, then hit <strong>Deploy</strong> — no QR needed!</div>
-        </div>
-        <div class="deploy-step">
-          <div class="deploy-num">4</div>
-          <div class="deploy-text">Message your bot number and type <strong>.menu</strong> to confirm it's live 🎉</div>
-        </div>
-      </div>
-
-      <div class="new-session-row">
-        <button class="btn-outline" onclick="resetAll()">⟳ Generate another session</button>
+    <div class="sidebar-section">
+      <div class="sidebar-label">// METRICS</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-val" id="sbSessions">0</div><div class="stat-lbl">Sessions</div></div>
+        <div class="stat-box"><div class="stat-val" id="sbUptime">0m</div><div class="stat-lbl">Uptime</div></div>
+        <div class="stat-box"><div class="stat-val">150+</div><div class="stat-lbl">Countries</div></div>
+        <div class="stat-box"><div class="stat-val">8</div><div class="stat-lbl">Languages</div></div>
       </div>
     </div>
-
+    <div class="sidebar-section">
+      <div class="sidebar-label">// SYSTEM</div>
+      <div class="sys-line"><span class="sys-key">STATUS</span><span class="sys-val green" id="sysStatus">ONLINE</span></div>
+      <div class="sys-line"><span class="sys-key">PROTOCOL</span><span class="sys-val blue">BAILEYS v6</span></div>
+      <div class="sys-line"><span class="sys-key">ENCRYPT</span><span class="sys-val blue">BASE64</span></div>
+      <div class="sys-line"><span class="sys-key">REGIONS</span><span class="sys-val">GLOBAL</span></div>
+      <div class="sys-line"><span class="sys-key">NODE</span><span class="sys-val">≥20.x</span></div>
+    </div>
   </div>
 
-  <div class="footer">VORTE PRO © 2025 &nbsp;·&nbsp; Each session is unique to your WhatsApp number &nbsp;·&nbsp; Keep your Session ID private</div>
+  <div class="main">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="term-dots"><div class="term-dot td-red"></div><div class="term-dot td-yellow"></div><div class="term-dot td-green"></div></div>
+        <div class="term-title">vorte-pro — session-generator — 80x24</div>
+              </div>
+      <div class="terminal-body">
+
+        <div class="panel active" id="panel1">
+          <div class="cmd-line"><span class="cmd-prompt">root@vorte</span><span class="cmd-path">:~/session</span><span class="cmd-text">$ ./generate_session.sh</span></div>
+          <div class="cmd-output">SESSION<span class="cursor"></span></div>
+          <div class="cmd-sub" data-i18n="p1sub">// ENTER YOUR WHATSAPP NUMBER TO BEGIN AUTHENTICATION</div>
+          <div class="term-divider"></div>
+          <div class="field-group">
+            <div class="field-label" data-i18n="searchLabel">Search Country</div>
+            <input class="search-input" id="countrySearch" placeholder="type to filter countries..." oninput="filterCountries(this.value)"/>
+          </div>
+          <div class="field-group">
+            <div class="field-label" data-i18n="phoneLabel">Target Number</div>
+            <div class="input-row">
+              <select class="country-select" id="countryCode">
+                <optgroup label="🌍 Africa">
+                  <option value="255" selected>🇹🇿 +255 Tanzania</option><option value="27">🇿🇦 +27 South Africa</option>
+                  <option value="20">🇪🇬 +20 Egypt</option><option value="234">🇳🇬 +234 Nigeria</option>
+                  <option value="254">🇰🇪 +254 Kenya</option><option value="233">🇬🇭 +233 Ghana</option>
+                  <option value="251">🇪🇹 +251 Ethiopia</option><option value="256">🇺🇬 +256 Uganda</option>
+                  <option value="250">🇷🇼 +250 Rwanda</option><option value="260">🇿🇲 +260 Zambia</option>
+                  <option value="263">🇿🇼 +263 Zimbabwe</option><option value="212">🇲🇦 +212 Morocco</option>
+                  <option value="213">🇩🇿 +213 Algeria</option><option value="216">🇹🇳 +216 Tunisia</option>
+                  <option value="218">🇱🇾 +218 Libya</option><option value="249">🇸🇩 +249 Sudan</option>
+                  <option value="252">🇸🇴 +252 Somalia</option><option value="253">🇩🇯 +253 Djibouti</option>
+                  <option value="258">🇲🇿 +258 Mozambique</option><option value="261">🇲🇬 +261 Madagascar</option>
+                  <option value="264">🇳🇦 +264 Namibia</option><option value="265">🇲🇼 +265 Malawi</option>
+                  <option value="266">🇱🇸 +266 Lesotho</option><option value="267">🇧🇼 +267 Botswana</option>
+                  <option value="268">🇸🇿 +268 Eswatini</option><option value="237">🇨🇲 +237 Cameroon</option>
+                  <option value="221">🇸🇳 +221 Senegal</option><option value="225">🇨🇮 +225 Ivory Coast</option>
+                  <option value="226">🇧🇫 +226 Burkina Faso</option><option value="227">🇳🇪 +227 Niger</option>
+                  <option value="228">🇹🇬 +228 Togo</option><option value="229">🇧🇯 +229 Benin</option>
+                  <option value="220">🇬🇲 +220 Gambia</option><option value="222">🇲🇷 +222 Mauritania</option>
+                  <option value="223">🇲🇱 +223 Mali</option><option value="224">🇬🇳 +224 Guinea</option>
+                  <option value="232">🇸🇱 +232 Sierra Leone</option><option value="231">🇱🇷 +231 Liberia</option>
+                  <option value="236">🇨🇫 +236 Central African Rep.</option><option value="235">🇹🇩 +235 Chad</option>
+                  <option value="238">🇨🇻 +238 Cape Verde</option><option value="240">🇬🇶 +240 Equatorial Guinea</option>
+                  <option value="241">🇬🇦 +241 Gabon</option><option value="242">🇨🇬 +242 Congo</option>
+                  <option value="243">🇨🇩 +243 DR Congo</option><option value="244">🇦🇴 +244 Angola</option>
+                  <option value="245">🇬🇼 +245 Guinea-Bissau</option><option value="257">🇧🇮 +257 Burundi</option>
+                  <option value="291">🇪🇷 +291 Eritrea</option>
+                </optgroup>
+                <optgroup label="🌏 Asia">
+                  <option value="91">🇮🇳 +91 India</option><option value="92">🇵🇰 +92 Pakistan</option>
+                  <option value="880">🇧🇩 +880 Bangladesh</option><option value="94">🇱🇰 +94 Sri Lanka</option>
+                  <option value="95">🇲🇲 +95 Myanmar</option><option value="977">🇳🇵 +977 Nepal</option>
+                  <option value="975">🇧🇹 +975 Bhutan</option><option value="960">🇲🇻 +960 Maldives</option>
+                  <option value="93">🇦🇫 +93 Afghanistan</option><option value="62">🇮🇩 +62 Indonesia</option>
+                  <option value="63">🇵🇭 +63 Philippines</option><option value="60">🇲🇾 +60 Malaysia</option>
+                  <option value="65">🇸🇬 +65 Singapore</option><option value="66">🇹🇭 +66 Thailand</option>
+                  <option value="84">🇻🇳 +84 Vietnam</option><option value="855">🇰🇭 +855 Cambodia</option>
+                  <option value="856">🇱🇦 +856 Laos</option><option value="673">🇧🇳 +673 Brunei</option>
+                  <option value="86">🇨🇳 +86 China</option><option value="81">🇯🇵 +81 Japan</option>
+                  <option value="82">🇰🇷 +82 South Korea</option><option value="852">🇭🇰 +852 Hong Kong</option>
+                  <option value="886">🇹🇼 +886 Taiwan</option><option value="976">🇲🇳 +976 Mongolia</option>
+                  <option value="966">🇸🇦 +966 Saudi Arabia</option><option value="971">🇦🇪 +971 UAE</option>
+                  <option value="962">🇯🇴 +962 Jordan</option><option value="961">🇱🇧 +961 Lebanon</option>
+                  <option value="963">🇸🇾 +963 Syria</option><option value="964">🇮🇶 +964 Iraq</option>
+                  <option value="965">🇰🇼 +965 Kuwait</option><option value="968">🇴🇲 +968 Oman</option>
+                  <option value="974">🇶🇦 +974 Qatar</option><option value="973">🇧🇭 +973 Bahrain</option>
+                  <option value="967">🇾🇪 +967 Yemen</option><option value="972">🇮🇱 +972 Israel</option>
+                  <option value="90">🇹🇷 +90 Turkey</option><option value="7">🇷🇺 +7 Russia</option>
+                  <option value="998">🇺🇿 +998 Uzbekistan</option><option value="996">🇰🇬 +996 Kyrgyzstan</option>
+                  <option value="992">🇹🇯 +992 Tajikistan</option><option value="993">🇹🇲 +993 Turkmenistan</option>
+                  <option value="994">🇦🇿 +994 Azerbaijan</option><option value="995">🇬🇪 +995 Georgia</option>
+                  <option value="374">🇦🇲 +374 Armenia</option>
+                </optgroup>
+                <optgroup label="🌍 Europe">
+                  <option value="44">🇬🇧 +44 UK</option><option value="49">🇩🇪 +49 Germany</option>
+                  <option value="33">🇫🇷 +33 France</option><option value="39">🇮🇹 +39 Italy</option>
+                  <option value="34">🇪🇸 +34 Spain</option><option value="31">🇳🇱 +31 Netherlands</option>
+                  <option value="32">🇧🇪 +32 Belgium</option><option value="41">🇨🇭 +41 Switzerland</option>
+                  <option value="43">🇦🇹 +43 Austria</option><option value="46">🇸🇪 +46 Sweden</option>
+                  <option value="47">🇳🇴 +47 Norway</option><option value="45">🇩🇰 +45 Denmark</option>
+                  <option value="358">🇫🇮 +358 Finland</option><option value="351">🇵🇹 +351 Portugal</option>
+                  <option value="30">🇬🇷 +30 Greece</option><option value="48">🇵🇱 +48 Poland</option>
+                  <option value="420">🇨🇿 +420 Czech Republic</option><option value="36">🇭🇺 +36 Hungary</option>
+                  <option value="40">🇷🇴 +40 Romania</option><option value="380">🇺🇦 +380 Ukraine</option>
+                  <option value="353">🇮🇪 +353 Ireland</option><option value="354">🇮🇸 +354 Iceland</option>
+                  <option value="385">🇭🇷 +385 Croatia</option><option value="381">🇷🇸 +381 Serbia</option>
+                  <option value="355">🇦🇱 +355 Albania</option><option value="359">🇧🇬 +359 Bulgaria</option>
+                </optgroup>
+                <optgroup label="🌎 Americas">
+                  <option value="1">🇺🇸 +1 USA / Canada</option><option value="55">🇧🇷 +55 Brazil</option>
+                  <option value="52">🇲🇽 +52 Mexico</option><option value="54">🇦🇷 +54 Argentina</option>
+                  <option value="57">🇨🇴 +57 Colombia</option><option value="51">🇵🇪 +51 Peru</option>
+                  <option value="56">🇨🇱 +56 Chile</option><option value="58">🇻🇪 +58 Venezuela</option>
+                  <option value="593">🇪🇨 +593 Ecuador</option><option value="591">🇧🇴 +591 Bolivia</option>
+                  <option value="595">🇵🇾 +595 Paraguay</option><option value="598">🇺🇾 +598 Uruguay</option>
+                  <option value="509">🇭🇹 +509 Haiti</option><option value="507">🇵🇦 +507 Panama</option>
+                  <option value="506">🇨🇷 +506 Costa Rica</option><option value="504">🇭🇳 +504 Honduras</option>
+                  <option value="503">🇸🇻 +503 El Salvador</option><option value="502">🇬🇹 +502 Guatemala</option>
+                  <option value="505">🇳🇮 +505 Nicaragua</option>
+                </optgroup>
+                <optgroup label="🌏 Oceania">
+                  <option value="61">🇦🇺 +61 Australia</option><option value="64">🇳🇿 +64 New Zealand</option>
+                  <option value="679">🇫🇯 +679 Fiji</option><option value="675">🇵🇬 +675 Papua New Guinea</option>
+                </optgroup>
+              </select>
+              <input class="phone-input" id="phoneInput" type="tel" placeholder="712345678" maxlength="13" autocomplete="tel"/>
+            </div>
+          </div>
+          <button class="exec-btn" id="requestBtn" onclick="requestCode()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="position:relative;z-index:1"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <span id="reqBtnText" data-i18n="getCode">EXECUTE // GET PAIRING CODE</span>
+            <div class="btn-spinner" id="reqSpinner"></div>
+          </button>
+          <div class="term-error" id="step1Error"></div>
+        </div>
+
+        <div class="panel" id="panel2">
+          <div class="cmd-line"><span class="cmd-prompt">root@vorte</span><span class="cmd-path">:~/session</span><span class="cmd-text">$ awaiting_confirmation.sh</span></div>
+          <div class="cmd-output" data-i18n="p2title">AUTHENTICATE<span class="cursor"></span></div>
+          <div class="cmd-sub" data-i18n="p2sub">// ENTER CODE IN WHATSAPP TO COMPLETE HANDSHAKE</div>
+          <div class="term-divider"></div>
+          <div class="code-display">
+            <div class="code-chunks" id="codeChunks"></div>
+            <div class="code-timer" id="codeTimer">⏱ EXPIRES IN 60s</div>
+          </div>
+          <div class="instructions-box">
+            <span class="hl">WHATSAPP</span> → <span class="hl">⋮ MENU</span> → <span class="hl">LINKED DEVICES</span> → <span class="hl">LINK A DEVICE</span><br>
+            TAP <span class="hl">"LINK WITH PHONE NUMBER"</span> → ENTER THE CODE ABOVE
+          </div>
+          <div class="waiting-indicator">
+            <div class="wait-ring"></div>
+            <div class="wait-text"><strong data-i18n="waitTitle">AWAITING WHATSAPP HANDSHAKE...</strong><br><span data-i18n="waitSub">SESSION ID WILL APPEAR AUTOMATICALLY ONCE AUTHENTICATED.</span></div>
+          </div>
+          <div class="term-error" id="step2Error"></div>
+          <div style="margin-top:10px"><button class="new-sess-btn" onclick="goBack()" data-i18n="tryAgain">↩ RETRY WITH DIFFERENT NUMBER</button></div>
+        </div>
+
+        <div class="panel" id="panel3">
+          <div class="cmd-line"><span class="cmd-prompt">root@vorte</span><span class="cmd-path">:~/session</span><span class="cmd-text">$ session_ready.sh</span></div>
+          <div class="success-header">
+            <div class="success-badge">✓ AUTH COMPLETE</div>
+            <div class="success-title" data-i18n="p3title">SESSION READY<span class="cursor"></span></div>
+          </div>
+          <div class="term-divider"></div>
+          <div class="session-box">
+            <div class="session-id-row">
+              <div class="session-id-text" id="sessionIdValue"></div>
+              <button class="copy-btn" id="copyBtn" onclick="copySessionId()" data-i18n="copy">COPY</button>
+            </div>
+          </div>
+          <div class="deploy-grid">
+            <div class="deploy-card"><div class="deploy-num">01</div><div class="deploy-text" data-i18n="deploy1">Deploy <strong>VORTE PRO</strong> to Heroku, Railway, or Render</div></div>
+            <div class="deploy-card"><div class="deploy-num">02</div><div class="deploy-text">Set env var <code>SESSION_ID</code> = your copied value above</div></div>
+            <div class="deploy-card"><div class="deploy-num">03</div><div class="deploy-text" data-i18n="deploy3">Set <code>OWNER_1</code> to your number → <strong>Deploy</strong></div></div>
+            <div class="deploy-card"><div class="deploy-num">04</div><div class="deploy-text" data-i18n="deploy4">Send <strong>.menu</strong> to your bot — you're live! 🎉</div></div>
+          </div>
+          <button class="new-sess-btn" onclick="resetAll()" data-i18n="newSession">↩ GENERATE NEW SESSION</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <div class="sb-item green">◉ VORTE PRO</div>
+    <div class="sb-sep">|</div>
+    <div class="sb-item highlight" id="sbLang">LANG: EN</div>
+    <div class="sb-sep">|</div>
+    <div class="sb-item" id="sbStep">STEP: [01] IDENTIFY</div>
+    <div class="sb-sep">|</div>
+    <div class="sb-item">ENCRYPT: BASE64</div>
+    <div class="sb-sep">|</div>
+    <div class="sb-item" id="sbTime"></div>
+    <div style="flex:1"></div>
+    <div class="sb-item">© 2025 VORTE PRO // KEEP SESSION_ID PRIVATE</div>
+  </div>
 </div>
 
 <script>
-  const API = window.location.origin;
-  let currentToken = null;
-  let pollInterval = null;
-  let timerInterval = null;
-  let currentSessionId = null;
+const API=window.location.origin;
+let currentToken=null,pollInterval=null,timerInterval=null,currentSessionId=null;
 
-  function goToStep(n) {
-    [1,2,3].forEach(i => {
-      document.getElementById('panel'+i).classList.toggle('active', i===n);
-      const sc = document.getElementById('sc'+i);
-      const sl = document.getElementById('sl'+i);
-      if (i < n) { sc.className='step-circle done'; sc.innerHTML='✓'; sl.className='step-label done'; }
-      else if (i===n) { sc.className='step-circle active'; sl.className='step-label active'; }
-      else { sc.className='step-circle'; sl.className='step-label'; }
-    });
-    document.getElementById('pl1').classList.toggle('done', n>1);
-    document.getElementById('pl2').classList.toggle('done', n>2);
+// Matrix rain
+const canvas=document.getElementById('matrixCanvas'),ctx=canvas.getContext('2d');
+function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
+const cols=Math.floor(window.innerWidth/20),drops=Array(cols).fill(1);
+const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&アイウエオカキクケコ';
+function drawMatrix(){
+  ctx.fillStyle='rgba(2,4,8,0.05)';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#00ff88';ctx.font='12px Share Tech Mono';
+  drops.forEach((y,i)=>{ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*20,y*20);if(y*20>canvas.height&&Math.random()>0.975)drops[i]=0;drops[i]++;});
+}
+setInterval(drawMatrix,50);
+
+// Clock
+setInterval(()=>{const el=document.getElementById('sbTime');if(el)el.textContent=new Date().toTimeString().slice(0,8);},1000);
+document.getElementById('sbTime').textContent=new Date().toTimeString().slice(0,8);
+
+  // Health poll
+async function pollHealth(){
+  try{
+    const r=await fetch(API+'/health'),d=await r.json();
+    const upSec=d.uptime||0,upMin=Math.floor(upSec/60),upHr=Math.floor(upMin/60);
+    const uptimeStr=upHr>0?upHr+'h'+(upMin%60)+'m':upMin+'m';
+    document.getElementById('uptimeStat').textContent=uptimeStr;
+    document.getElementById('sbUptime').textContent=uptimeStr;
+    const active=d.activeSessions||0;
+    document.getElementById('sessionCount').textContent=active+' ACTIVE';
+    document.getElementById('sbSessions').textContent=active;
+  }catch(e){
+    document.getElementById('serverStatus').textContent='SERVER OFFLINE';
+    document.getElementById('sysStatus').textContent='OFFLINE';
+    document.getElementById('sysStatus').style.color='var(--red)';
   }
+}
+pollHealth();setInterval(pollHealth,10000);
 
-  function showError(id, msg) { const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
-  function hideError(id) { document.getElementById(id).style.display='none'; }
+// i18n
+const i18n={
+  en:{step1:'IDENTIFY',step2:'AUTHENTICATE',step3:'DEPLOY',searchLabel:'Search Country',phoneLabel:'Target Number',p1sub:'// ENTER YOUR WHATSAPP NUMBER TO BEGIN AUTHENTICATION',getCode:'EXECUTE // GET PAIRING CODE',p2title:'AUTHENTICATE',p2sub:'// ENTER CODE IN WHATSAPP TO COMPLETE HANDSHAKE',waitTitle:'AWAITING WHATSAPP HANDSHAKE...',waitSub:'SESSION ID WILL APPEAR AUTOMATICALLY ONCE AUTHENTICATED.',tryAgain:'↩ RETRY WITH DIFFERENT NUMBER',p3title:'SESSION READY',copy:'COPY',deploy1:'Deploy <strong>VORTE PRO</strong> to Heroku, Railway, or Render',deploy3:'Set <code>OWNER_1</code> to your number → <strong>Deploy</strong>',deploy4:'Send <strong>.menu</strong> to your bot — you\'re live! 🎉',newSession:'↩ GENERATE NEW SESSION'},
+  sw:{step1:'TAMBUA',step2:'THIBITISHA',step3:'WEKA',searchLabel:'Tafuta Nchi',phoneLabel:'Namba Lengwa',p1sub:'// WEKA NAMBA YAKO YA WHATSAPP KUANZA',getCode:'TEKELEZA // PATA MSIMBO',p2title:'THIBITISHA',p2sub:'// WEKA MSIMBO KATIKA WHATSAPP KUKAMILISHA',waitTitle:'INASUBIRI WHATSAPP...',waitSub:'SESSION ID ITAONEKANA MOJA KWA MOJA.',tryAgain:'↩ JARIBU NAMBA NYINGINE',p3title:'KIKAO TAYARI',copy:'NAKILI',deploy1:'Weka <strong>VORTE PRO</strong> kwenye Heroku au Render',deploy3:'Weka <code>OWNER_1</code> namba yako → <strong>Weka</strong>',deploy4:'Tuma <strong>.menu</strong> kwa bot yako 🎉',newSession:'↩ TENGENEZA KIKAO KIPYA'},
+  ar:{step1:'تحديد',step2:'مصادقة',step3:'نشر',searchLabel:'بحث عن دولة',phoneLabel:'الرقم المستهدف',p1sub:'// أدخل رقم واتساب للبدء',getCode:'تنفيذ // احصل على الرمز',p2title:'مصادقة',p2sub:'// أدخل الرمز في واتساب',waitTitle:'في انتظار واتساب...',waitSub:'سيظهر معرف الجلسة تلقائياً.',tryAgain:'↩ إعادة المحاولة برقم آخر',p3title:'الجلسة جاهزة',copy:'نسخ',deploy1:'انشر <strong>VORTE PRO</strong> على Heroku أو Render',deploy3:'اضبط <code>OWNER_1</code> → <strong>انشر</strong>',deploy4:'أرسل <strong>.menu</strong> لبوتك 🎉',newSession:'↩ إنشاء جلسة جديدة'},
+  fr:{step1:'IDENTIFIER',step2:'AUTHENTIFIER',step3:'DÉPLOYER',searchLabel:'Rechercher un pays',phoneLabel:'Numéro cible',p1sub:'// ENTREZ VOTRE NUMÉRO WHATSAPP POUR COMMENCER',getCode:'EXÉCUTER // OBTENIR LE CODE',p2title:'AUTHENTIFIER',p2sub:'// ENTREZ LE CODE DANS WHATSAPP',waitTitle:'EN ATTENTE DE WHATSAPP...',waitSub:"L'ID DE SESSION APPARAÎTRA AUTOMATIQUEMENT.",tryAgain:'↩ RÉESSAYER AVEC UN AUTRE NUMÉRO',p3title:'SESSION PRÊTE',copy:'COPIER',deploy1:'Déployez <strong>VORTE PRO</strong> sur Heroku ou Render',deploy3:'Définissez <code>OWNER_1</code> → <strong>Déployez</strong>',deploy4:'Envoyez <strong>.menu</strong> à votre bot 🎉',newSession:'↩ GÉNÉRER UNE NOUVELLE SESSION'},
+  pt:{step1:'IDENTIFICAR',step2:'AUTENTICAR',step3:'IMPLANTAR',searchLabel:'Pesquisar País',phoneLabel:'Número Alvo',p1sub:'// INSIRA SEU NÚMERO WHATSAPP PARA COMEÇAR',getCode:'EXECUTAR // OBTER CÓDIGO',p2title:'AUTENTICAR',p2sub:'// INSIRA O CÓDIGO NO WHATSAPP',waitTitle:'AGUARDANDO WHATSAPP...',waitSub:'O SESSION ID APARECERÁ AUTOMATICAMENTE.',tryAgain:'↩ TENTAR OUTRO NÚMERO',p3title:'SESSÃO PRONTA',copy:'COPIAR',deploy1:'Implante <strong>VORTE PRO</strong> no Heroku ou Render',deploy3:'Defina <code>OWNER_1</code> → <strong>Implante</strong>',deploy4:'Envie <strong>.menu</strong> ao seu bot 🎉',newSession:'↩ GERAR NOVA SESSÃO'},
+  hi:{step1:'पहचानें',step2:'प्रमाणित',step3:'तैनात',searchLabel:'देश खोजें',phoneLabel:'लक्ष्य नंबर',p1sub:'// अपना WhatsApp नंबर दर्ज करें',getCode:'निष्पादित करें // कोड पाएं',p2title:'प्रमाणित करें',p2sub:'// WhatsApp में कोड दर्ज करें',waitTitle:'WHATSAPP की प्रतीक्षा...',waitSub:'SESSION ID स्वचालित रूप से दिखाई देगा।',tryAgain:'↩ दूसरे नंबर से पुनः प्रयास',p3title:'SESSION तैयार',copy:'कॉपी',deploy1:'<strong>VORTE PRO</strong> को Heroku या Render पर तैनात करें',deploy3:'<code>OWNER_1</code> सेट करें → <strong>तैनात करें</strong>',deploy4:'बॉट को <strong>.menu</strong> भेजें 🎉',newSession:'↩ नया SESSION बनाएं'},
+  id:{step1:'IDENTIFIKASI',step2:'AUTENTIKASI',step3:'DEPLOY',searchLabel:'Cari Negara',phoneLabel:'Nomor Target',p1sub:'// MASUKKAN NOMOR WHATSAPP ANDA UNTUK MULAI',getCode:'JALANKAN // DAPATKAN KODE',p2title:'AUTENTIKASI',p2sub:'// MASUKKAN KODE DI WHATSAPP',waitTitle:'MENUNGGU WHATSAPP...',waitSub:'SESSION ID AKAN MUNCUL OTOMATIS.',tryAgain:'↩ COBA NOMOR LAIN',p3title:'SESI SIAP',copy:'SALIN',deploy1:'Deploy <strong>VORTE PRO</strong> ke Heroku atau Render',deploy3:'Atur <code>OWNER_1</code> → <strong>Deploy</strong>',deploy4:'Kirim <strong>.menu</strong> ke bot Anda 🎉',newSession:'↩ BUAT SESI BARU'},
+  tr:{step1:'TANI',step2:'KİMLİK DOĞRULA',step3:'DAĞIT',searchLabel:'Ülke Ara',phoneLabel:'Hedef Numara',p1sub:'// WHATSAPP NUMARANIZI GİRİN',getCode:'ÇALIŞTIR // KOD AL',p2title:'KİMLİK DOĞRULA',p2sub:"// WHATSAPP'A KODU GİR",waitTitle:'WHATSAPP BEKLENİYOR...',waitSub:'OTURUM KİMLİĞİ OTOMATİK GÖRÜNECEK.',tryAgain:'↩ FARKLI NUMARAYLA TEKRAR DENE',p3title:'OTURUM HAZIR',copy:'KOPYALA',deploy1:'<strong>VORTE PRO</strong>\'yu Heroku veya Render\'e Dağıt',deploy3:'<code>OWNER_1</code> Ayarla → <strong>Dağıt</strong>',deploy4:'Bota <strong>.menu</strong> Gönder 🎉',newSession:'↩ YENİ OTURUM OLUŞTUR'}
+};
 
-  async function requestCode() {
-    const cc = document.getElementById('countryCode').value;
-    const num = document.getElementById('phoneInput').value.replace(/\D/g,'');
-    const full = cc + num;
-    hideError('step1Error');
-    if (!num || num.length < 5) return showError('step1Error', 'Please enter a valid phone number.');
+let currentLang='en';
+function setLang(lang){
+  currentLang=lang;
+  const t=i18n[lang]||i18n.en;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.getAttribute('data-i18n');if(t[k]!==undefined)el.innerHTML=t[k];});
+  document.getElementById('htmlRoot').setAttribute('dir',lang==='ar'?'rtl':'ltr');
+  document.getElementById('sbLang').textContent='LANG: '+lang.toUpperCase();
+}
 
-    const btn=document.getElementById('requestBtn'), txt=document.getElementById('reqBtnText'), spin=document.getElementById('reqSpinner');
-    btn.disabled=true; txt.textContent='Requesting code...'; spin.style.display='block';
+function filterCountries(q){
+  const sel=document.getElementById('countryCode');
+  Array.from(sel.options).forEach(opt=>{opt.style.display=opt.text.toLowerCase().includes(q.toLowerCase())?'':'none';});
+}
 
-    try {
-      const res = await fetch(`${API}/api/request-code`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ phone: full })
-      });
-      const data = await res.json();
-      if (!data.success) return showError('step1Error', data.error || 'Failed to get pairing code.');
-      currentToken = data.token;
-      showPairingCode(data.code);
-      goToStep(2);
-      startPolling();
-    } catch(e) {
-      showError('step1Error', 'Cannot reach the server. Make sure the session server is running.');
-    } finally {
-      btn.disabled=false; txt.textContent='Get Pairing Code'; spin.style.display='none';
-    }
-  }
+function goToStep(n){
+  [1,2,3].forEach(i=>{
+    document.getElementById('panel'+i).classList.toggle('active',i===n);
+    const si=document.getElementById('sideStep'+i);
+    si.classList.toggle('active',i===n);si.classList.toggle('done',i<n);
+  });
+  const steps=['[01] IDENTIFY','[02] AUTHENTICATE','[03] DEPLOY'];
+  document.getElementById('sbStep').textContent='STEP: '+steps[n-1];
+}
 
-  function showPairingCode(code) {
-    const chunks = code.split('-');
-    document.getElementById('codeChunks').innerHTML = chunks.map(c=>`<div class="code-chunk">${c}</div>`).join('');
-    let secs=60;
-    const el=document.getElementById('codeTimer');
-    if(timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(()=>{
-      secs--;
-      el.textContent = secs>0 ? `⏱ Code expires in ${secs}s` : '⚠️ Code expired — go back and try again';
-      el.className = secs<=15 ? 'code-timer urgent' : 'code-timer';
-      if(secs<=0) clearInterval(timerInterval);
-    }, 1000);
-  }
+function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
+function hideError(id){document.getElementById(id).style.display='none';}
 
-  function startPolling() {
-    if(pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(async ()=>{
-      if(!currentToken) return;
-      try {
-        const res = await fetch(`${API}/api/session-status/${currentToken}`);
-        const data = await res.json();
-        if(!data.success) {
-          clearInterval(pollInterval);
-          return showError('step2Error', data.error || 'Session error. Please try again.');
-        }
-        if(data.status==='ready' && data.sessionId) {
-          clearInterval(pollInterval);
-          if(timerInterval) clearInterval(timerInterval);
-          currentSessionId = data.sessionId;
-          document.getElementById('sessionIdValue').textContent = data.sessionId;
-          goToStep(3);
-        }
-      } catch(e) { /* keep trying */ }
-    }, 2000);
-  }
+async function requestCode(){
+  const cc=document.getElementById('countryCode').value;
+  const num=document.getElementById('phoneInput').value.replace(/\D/g,'');
+  const full=cc+num;
+  hideError('step1Error');
+  if(!num||num.length<5)return showError('step1Error','INVALID NUMBER — PLEASE CHECK AND RETRY');
+  const btn=document.getElementById('requestBtn'),txt=document.getElementById('reqBtnText'),spin=document.getElementById('reqSpinner');
+  btn.disabled=true;txt.textContent='PROCESSING...';spin.style.display='block';
+  try{
+    const res=await fetch(API+'/api/request-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:full})});
+    const data=await res.json();
+    if(!data.success)return showError('step1Error',data.error||'FAILED TO GENERATE CODE');
+    currentToken=data.token;showPairingCode(data.code);goToStep(2);startPolling();
+  }catch(e){showError('step1Error','CONNECTION REFUSED — VERIFY SERVER IS RUNNING');}
+  finally{btn.disabled=false;txt.textContent=i18n[currentLang].getCode||'EXECUTE // GET PAIRING CODE';spin.style.display='none';}
+}
 
-  async function copySessionId() {
-    if(!currentSessionId) return;
-    try {
-      await navigator.clipboard.writeText(currentSessionId);
-    } catch(e) {
-      const el=document.getElementById('sessionIdValue');
-      const range=document.createRange(); range.selectNode(el);
-      window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
-      document.execCommand('copy'); window.getSelection().removeAllRanges();
-    }
-    const btn=document.getElementById('copyBtn');
-    btn.textContent='Copied!'; btn.classList.add('copied');
-    setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 2500);
-  }
+function showPairingCode(code){
+  const chunks=code.split('-');
+  document.getElementById('codeChunks').innerHTML=chunks.map(c=>'<div class="code-chunk">'+c+'</div>').join('');
+  let secs=60;const el=document.getElementById('codeTimer');
+  if(timerInterval)clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    secs--;
+    el.textContent=secs>0?'⏱ EXPIRES IN '+secs+'s':'⚠ CODE EXPIRED — RETRY';
+    el.className=secs<=15?'code-timer urgent':'code-timer';
+    if(secs<=0)clearInterval(timerInterval);
+  },1000);
+}
 
-  function goBack() {
-    clearInterval(pollInterval); clearInterval(timerInterval);
-    currentToken=null; hideError('step2Error'); goToStep(1);
-  }
+function startPolling(){
+  if(pollInterval)clearInterval(pollInterval);
+  pollInterval=setInterval(async()=>{
+    if(!currentToken)return;
+    try{
+      const res=await fetch(API+'/api/session-status/'+currentToken);
+      const data=await res.json();
+      if(!data.success){clearInterval(pollInterval);return showError('step2Error',data.error||'SESSION ERROR');}
+      if(data.status==='ready'&&data.sessionId){
+        clearInterval(pollInterval);if(timerInterval)clearInterval(timerInterval);
+        currentSessionId=data.sessionId;typewriterReveal(data.sessionId);goToStep(3);
+      }
+    }catch(e){}
+  },2000);
+}
 
-  function resetAll() {
-    clearInterval(pollInterval); clearInterval(timerInterval);
-    currentToken=null; currentSessionId=null;
-    document.getElementById('phoneInput').value='';
-    hideError('step1Error'); goToStep(1);
-  }
+function typewriterReveal(text){
+  const el=document.getElementById('sessionIdValue');el.textContent='';let i=0;
+  const interval=setInterval(()=>{el.textContent+=text[i];i++;if(i>=text.length)clearInterval(interval);},8);
+}
 
-  document.getElementById('phoneInput').addEventListener('keydown', e=>{ if(e.key==='Enter') requestCode(); });
-  document.getElementById('phoneInput').addEventListener('input', e=>{ e.target.value=e.target.value.replace(/\D/g,''); });
+async function copySessionId(){
+  if(!currentSessionId)return;
+  try{await navigator.clipboard.writeText(currentSessionId);}
+  catch(e){const r=document.createRange();r.selectNode(document.getElementById('sessionIdValue'));window.getSelection().removeAllRanges();window.getSelection().addRange(r);document.execCommand('copy');window.getSelection().removeAllRanges();}
+  const btn=document.getElementById('copyBtn');
+  btn.textContent='✓ COPIED';btn.classList.add('copied');
+  setTimeout(()=>{btn.textContent=i18n[currentLang].copy||'COPY';btn.classList.remove('copied');},2500);
+}
+
+function goBack(){clearInterval(pollInterval);clearInterval(timerInterval);currentToken=null;hideError('step2Error');goToStep(1);}
+function resetAll(){clearInterval(pollInterval);clearInterval(timerInterval);currentToken=null;currentSessionId=null;document.getElementById('phoneInput').value='';hideError('step1Error');goToStep(1);}
+
+document.getElementById('phoneInput').addEventListener('keydown',e=>{if(e.key==='Enter')requestCode();});
+document.getElementById('phoneInput').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'');});
 </script>
 </body>
 </html>
