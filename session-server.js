@@ -102,18 +102,6 @@ app.post('/api/request-code', async (req, res) => {
 
     sock.ev.on('creds.update', async () => {
       await saveCreds();
-      // After creds update, check if we can generate session ID
-      const sess = sessions[token];
-      if (sess && sess.status === 'paired') {
-        try {
-          const sessionId = generateSessionId(tmpDir);
-          sess.sessionId = sessionId;
-          sess.status = 'ready';
-          console.log(`✅ Session ID ready for token: ${token}`);
-        } catch (e) {
-          console.error('Error generating session ID:', e.message);
-        }
-      }
     });
 
     sock.ev.on('connection.update', async (update) => {
@@ -121,31 +109,37 @@ app.post('/api/request-code', async (req, res) => {
       const sess = sessions[token];
       if (!sess) return;
 
-      if (connection === 'open') {
-        console.log(`✅ WhatsApp connected for token: ${token}`);
-        sess.status = 'paired';
-        await saveCreds();
+      console.log(`🔄 Connection update for +${cleanPhone}: ${connection || 'unknown'}`);
 
-        // Generate session ID from the saved credentials
-        setTimeout(async () => {
-          try {
-            const sessionId = generateSessionId(tmpDir);
-            sess.sessionId = sessionId;
-            sess.status = 'ready';
-            console.log(`🔑 Session ID generated for +${cleanPhone}`);
-          } catch (e) {
-            console.error('Session ID generation error:', e.message);
-            sess.status = 'error';
-          }
-        }, 1500);
+      if (connection === 'open') {
+        console.log(`✅ WhatsApp connected for +${cleanPhone}`);
+        sess.status = 'paired';
+
+        // Save creds then immediately generate session ID
+        try {
+          await saveCreds();
+          console.log(`💾 Creds saved for +${cleanPhone}`);
+
+          // Small delay to ensure creds.json is fully written
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          const sessionId = generateSessionId(tmpDir);
+          sess.sessionId = sessionId;
+          sess.status = 'ready';
+          console.log(`🔑 Session ID ready for +${cleanPhone}`);
+        } catch (e) {
+          console.error(`❌ Session ID generation failed:`, e.message);
+          sess.status = 'error';
+        }
       }
 
       if (connection === 'close') {
         const code = lastDisconnect?.error?.output?.statusCode;
-        if (code === DisconnectReason.loggedOut || sess.status === 'ready') {
-          // Expected close after we got what we need
-          try { sock.end(); } catch (e) {}
+        console.log(`🔌 Connection closed for +${cleanPhone}, code: ${code}`);
+        if (sess.status !== 'ready') {
+          sess.status = 'error';
         }
+        try { sock.end(); } catch (e) {}
       }
     });
 
@@ -252,4 +246,4 @@ app.listen(PORT, '0.0.0.0', () => {
 
 process.on('uncaughtException', err => console.error('Uncaught:', err.message));
 process.on('unhandledRejection', reason => console.error('Unhandled rejection:', reason));
-  
+        
