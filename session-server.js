@@ -169,7 +169,7 @@ app.post('/api/request-code', async (req, res) => {
         // Only mark error if we haven't already gotten the session
         if (sess.status !== 'ready') {
           // Reconnect logic — don't give up on first close
-          if (code !== 401 && code !== 403 && attempts < 3) {
+          if (code !== 401 && code !== 403) {
             console.log(`🔄 Reconnecting... (not logged out)`);
           } else {
             sess.status = 'error';
@@ -181,11 +181,28 @@ app.post('/api/request-code', async (req, res) => {
 
     // Wait for socket to be ready then request pairing code
     console.log(`⏳ Waiting for socket to be ready...`);
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    let pairingCode;
 
-    console.log(`📲 Requesting pairing code for +${cleanPhone}...`);
-    const pairingCode = await sock.requestPairingCode(cleanPhone);
+await new Promise((resolve, reject) => {
+  sock.ev.on('connection.update', async (update) => {
+    const { connection } = update;
 
+    if (connection === 'connecting') {
+      try {
+        console.log(`📲 Requesting pairing code for +${cleanPhone}...`);
+        pairingCode = await sock.requestPairingCode(cleanPhone);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    }
+  });
+
+  // Safety timeout
+  setTimeout(() => reject(new Error('Socket not ready for pairing')), 15000);
+});
+
+if (!pairingCode) throw new Error('No pairing code returned from WhatsApp');
     // Delay after requesting to let WhatsApp process
     await new Promise(resolve => setTimeout(resolve, 2000));
 
