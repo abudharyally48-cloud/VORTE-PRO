@@ -68,7 +68,8 @@ app.post('/api/request-code', async (req, res) => {
       useMultiFileAuthState,
       fetchLatestBaileysVersion,
       makeCacheableSignalKeyStore,
-      DisconnectReason
+      DisconnectReason,
+      Browsers
     } = require('baileys');
     const P = require('pino');
 
@@ -79,7 +80,7 @@ app.post('/api/request-code', async (req, res) => {
       version,
       logger: P({ level: 'silent' }),
       printQRInTerminal: false,
-      browser: ['Ubuntu', 'Chrome', '22.0.0.0'],
+      browser: Browsers.ubuntu('Chrome'),
       auth: {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, P({ level: 'silent' })),
@@ -281,4 +282,4 @@ app.listen(PORT, '0.0.0.0', () => {
 
 process.on('uncaughtException', err => console.error('Uncaught:', err.message));
 process.on('unhandledRejection', reason => console.error('Unhandled rejection:', reason));
-        
+      
