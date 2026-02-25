@@ -84,8 +84,11 @@ app.post('/api/request-code', async (req, res) => {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, P({ level: 'silent' })),
       },
-      fetchAgent: null,
-      fireInitQueries: false,
+      connectTimeoutMs: 60000,
+      defaultQueryTimeoutMs: 60000,
+      keepAliveIntervalMs: 10000,
+      retryRequestDelayMs: 250,
+      maxMsgRetryCount: 5,
     });
 
     // Store session
@@ -102,31 +105,57 @@ app.post('/api/request-code', async (req, res) => {
 
     sock.ev.on('creds.update', async () => {
       await saveCreds();
+      // Backup: try generating session ID on every creds update
+      // in case connection 'open' event was missed
+      const sess = sessions[token];
+      if (sess && sess.status === 'paired' && !sess.sessionId) {
+        try {
+          const credsFile = path.join(tmpDir, 'creds.json');
+          if (fs.existsSync(credsFile)) {
+            const sessionId = generateSessionId(tmpDir);
+            sess.sessionId = sessionId;
+            sess.status = 'ready';
+            console.log(`🔑 Session ID generated via creds.update for +${cleanPhone}`);
+          }
+        } catch(e) {}
+      }
     });
 
     sock.ev.on('connection.update', async (update) => {
-      const { connection, lastDisconnect } = update;
+      const { connection, lastDisconnect, isNewLogin } = update;
       const sess = sessions[token];
       if (!sess) return;
 
-      console.log(`🔄 Connection update for +${cleanPhone}: ${connection || 'unknown'}`);
+      console.log(`🔄 Connection update for +${cleanPhone}: connection=${connection} isNewLogin=${isNewLogin}`);
 
       if (connection === 'open') {
         console.log(`✅ WhatsApp connected for +${cleanPhone}`);
         sess.status = 'paired';
 
-        // Save creds then immediately generate session ID
         try {
           await saveCreds();
           console.log(`💾 Creds saved for +${cleanPhone}`);
 
-          // Small delay to ensure creds.json is fully written
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Try immediately, then retry a few times if creds.json not ready yet
+          let attempts = 0;
+          const tryGenerate = async () => {
+            attempts++;
+            const credsFile = path.join(tmpDir, 'creds.json');
+            if (fs.existsSync(credsFile)) {
+              const sessionId = generateSessionId(tmpDir);
+              sess.sessionId = sessionId;
+              sess.status = 'ready';
+              console.log(`🔑 Session ID ready for +${cleanPhone} (attempt ${attempts})`);
+            } else if (attempts < 10) {
+              console.log(`⏳ creds.json not ready yet, retrying... (${attempts}/10)`);
+              setTimeout(tryGenerate, 1000);
+            } else {
+              console.error(`❌ creds.json never appeared for +${cleanPhone}`);
+              sess.status = 'error';
+            }
+          };
+          setTimeout(tryGenerate, 500);
 
-          const sessionId = generateSessionId(tmpDir);
-          sess.sessionId = sessionId;
-          sess.status = 'ready';
-          console.log(`🔑 Session ID ready for +${cleanPhone}`);
         } catch (e) {
           console.error(`❌ Session ID generation failed:`, e.message);
           sess.status = 'error';
@@ -136,8 +165,14 @@ app.post('/api/request-code', async (req, res) => {
       if (connection === 'close') {
         const code = lastDisconnect?.error?.output?.statusCode;
         console.log(`🔌 Connection closed for +${cleanPhone}, code: ${code}`);
+        // Only mark error if we haven't already gotten the session
         if (sess.status !== 'ready') {
-          sess.status = 'error';
+          // Reconnect logic — don't give up on first close
+          if (code !== 401 && code !== 403 && attempts < 3) {
+            console.log(`🔄 Reconnecting... (not logged out)`);
+          } else {
+            sess.status = 'error';
+          }
         }
         try { sock.end(); } catch (e) {}
       }
@@ -145,7 +180,7 @@ app.post('/api/request-code', async (req, res) => {
 
     // Wait for socket to be ready then request pairing code
     console.log(`⏳ Waiting for socket to be ready...`);
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     console.log(`📲 Requesting pairing code for +${cleanPhone}...`);
     const pairingCode = await sock.requestPairingCode(cleanPhone);
