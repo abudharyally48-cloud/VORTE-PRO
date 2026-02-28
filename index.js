@@ -326,7 +326,7 @@ async function startWhatsAppBot() {
     const sock = makeWASocket({
       logger: P({ level: "silent" }),
       printQRInTerminal: !SESSION_ID, // only show QR if no session ID
-      browser: [BOT_NAME, "Chrome", "1.0.0"],
+      browser: [Ubuntu, "Chrome", "1.0.0"],
       auth: {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, P().child({ level: "silent" })),
