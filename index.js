@@ -1724,11 +1724,11 @@ ${movie.Plot || "N/A"}`;
   }
 }
 
-// ===== 4. START BOT AFTER SERVER IS READY =====
-server.on('listening', () => {
-  console.log('✅ Server is ready, starting WhatsApp bot in 3 seconds...');
-  setTimeout(() => {
-    startWhatsAppBot().then(sock => {
+// ===== 4. START BOT AFTER SERVER IS READY======
+} catch (error) {
+  console.error('❌ Failed to start WhatsApp bot:', error);
+  return null;
+}.then(sock => {
       if (sock) {
         console.log('🎉 Bot successfully started!');
         console.log('👉 Access your bot at:');
