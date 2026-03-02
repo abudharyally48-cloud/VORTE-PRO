@@ -1725,20 +1725,22 @@ ${movie.Plot || "N/A"}`;
 }
 
 // ===== 4. START BOT AFTER SERVER IS READY======
-} catch (error) {
-  console.error('❌ Failed to start WhatsApp bot:', error);
-  return null;
-}.then(sock => {
-      if (sock) {
-        console.log('🎉 Bot successfully started!');
-        console.log('👉 Access your bot at:');
-        console.log(`   http://localhost:${PORT}`);
-        console.log(`   http://localhost:${PORT}/health`);
-      }
+async function startWhatsAppBot() {
+  try {
+    const sock = await makeWASocket({
+      // config here
     });
-  }, 3000);
-});
 
+    console.log('🎉 Bot successfully started!');
+    console.log(`👉 Access your bot at: http://localhost:${PORT}`);
+
+    return sock;
+
+  } catch (error) {
+    console.error('❌ Failed to start WhatsApp bot:', error);
+    return null;
+  }
+}
 // ===== 5. ERROR HANDLING =====
 process.on('uncaughtException', (error) => {
   console.error('⚠️ Uncaught Exception:', error.message);
