@@ -7,10 +7,13 @@ yarn-error.log
 .env
 config.js
 
-# Session data — contains WhatsApp credentials
+# Session data & Configuration — contains WhatsApp credentials & Group Settings
 session/
 tmp_session/
 tmp_sessions/
+storage/session/
+storage/groupSettings.json
+storage/groupSettings.json.bak
 creds.json
 *.json.bak
 
