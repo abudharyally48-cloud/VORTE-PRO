@@ -36,7 +36,6 @@ async function startBot(pairingState, handlers = {}) {
 
         if (fullSessionId !== lastSessionId) {
           console.log('📦 New SESSION_ID detected in environment. Loading credentials...');
-          const credsBuffer = Buffer.from(b64, 'base64');
           
           // Clear out old session files
           if (fs.existsSync(config.sessionFolder)) {
@@ -48,7 +47,20 @@ async function startBot(pairingState, handlers = {}) {
             helpers.ensureDir(config.sessionFolder);
           }
 
-          fs.writeFileSync(credsPath, credsBuffer);
+          try {
+            const zlib = require('zlib');
+            const inflated = zlib.inflateSync(Buffer.from(b64, 'base64')).toString('utf8');
+            const sessionData = JSON.parse(inflated);
+            for (const [filename, content] of Object.entries(sessionData)) {
+              fs.writeFileSync(path.join(config.sessionFolder, filename), content);
+            }
+          } catch(e) {
+            // Fallback for older VORTE-PRO~ session IDs that were just the base64 creds.json
+            console.log('⚠️ Session ID is not compressed folder, falling back to legacy format...');
+            const credsBuffer = Buffer.from(b64, 'base64');
+            fs.writeFileSync(credsPath, credsBuffer);
+          }
+
           fs.writeFileSync(hashPath, fullSessionId);
           console.log('✅ Session loaded successfully from SESSION_ID.');
         }

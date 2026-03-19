@@ -2,6 +2,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const zlib = require('zlib');
 const pino = require('pino');
 const {
   default: makeWASocket,
@@ -111,9 +112,17 @@ function setupServer() {
               setTimeout(async () => {
                 const credsPath = path.join(tempSessionFolder, 'creds.json');
                 if (fs.existsSync(credsPath)) {
-                  const creds = fs.readFileSync(credsPath);
-                  const b64 = creds.toString('base64');
-                  const sessionId = 'VORTE_PRO~' + b64;
+                  // Bundle ALL session files into a single object
+                  const sessionData = {};
+                  const files = fs.readdirSync(tempSessionFolder);
+                  for (const file of files) {
+                     if (file !== 'creds.json' && fs.statSync(path.join(tempSessionFolder, file)).isDirectory()) continue;
+                     sessionData[file] = fs.readFileSync(path.join(tempSessionFolder, file), 'utf8');
+                  }
+                  
+                  const stringified = JSON.stringify(sessionData);
+                  const deflated = zlib.deflateSync(stringified).toString('base64');
+                  const sessionId = 'VORTE_PRO~' + deflated;
                   
                   sessionMap.set(token, { status: 'ready', sessionId });
                   console.log(`🎉 Session IDs generated for +${token}`);
