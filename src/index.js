@@ -24,13 +24,18 @@ async function main() {
   // 3. Setup Web Server
   const { pairingState } = setupServer();
 
-  // 4. Start WhatsApp Bot with handlers
-  const sock = await startBot(pairingState, {
-    onMessage: (sock, upsert) => handleMessage(sock, upsert, getSettings, saveSettings),
-    onGroupUpdate: (sock, update) => handleGroupUpdate(sock, update, getSettings)
-  });
-
-  console.log('✅ Bot initialization complete. Monitoring events...');
+  // 4. Start WhatsApp Bot with handlers (unless Render is hosting as a generator purely)
+  if (process.env.SESSION_GENERATOR_ONLY === 'true') {
+    console.log('🛑 SESSION_GENERATOR_ONLY is true. The main bot logic will NOT be started.');
+    console.log('✅ Ready to serve standalone pairing requests on the web server.');
+  } else {
+    const sock = await startBot(pairingState, {
+      onMessage: (sock, upsert) => handleMessage(sock, upsert, getSettings, saveSettings),
+      onGroupUpdate: (sock, update) => handleGroupUpdate(sock, update, getSettings)
+    });
+  
+    console.log('✅ Bot initialization complete. Monitoring events...');
+  }
 }
 
 main().catch(err => {

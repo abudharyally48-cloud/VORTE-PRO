@@ -1344,7 +1344,7 @@ async function requestCode() {
   spin.style.display = 'block';
 
   try {
-    const res  = await fetch(API+'/api/request-code', {
+    const res  = await fetch(API+'/api/pair', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({phone: cc+num})

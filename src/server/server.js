@@ -1,16 +1,27 @@
 // src/server/server.js
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
+const pino = require('pino');
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  makeCacheableSignalKeyStore,
+  fetchLatestBaileysVersion,
+  DisconnectReason
+} = require("@whiskeysockets/baileys");
 const config = require('../config/config');
 
 const app = express();
 
-// Global state for pairing (will be updated by the bot)
+// Global state for local bot (still used for /qr locally)
 const pairingState = {
   sock: null,
-  pairingInProgress: {},
   latestQR: null
 };
+
+// Map to track temporary session generator requests
+const sessionMap = new Map();
 
 function setupServer() {
   app.use(express.json());
@@ -21,7 +32,7 @@ function setupServer() {
     res.sendFile(path.join(__dirname, '../../pairing.html'));
   });
 
-  // QR Route
+  // QR Route (for local bot instance monitoring)
   app.get('/qr', async (req, res) => {
     if (!pairingState.latestQR) {
       return res.send('<html><body style="background:#111;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><p>No QR available — bot may already be connected, or not started yet. Refresh in a moment.</p></body></html>');
@@ -43,43 +54,138 @@ function setupServer() {
     }
   });
 
-  // Pairing API
+  // Centralized Session Generator API
   app.post('/api/pair', async (req, res) => {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ success: false, error: 'Phone number is required.' });
     
     const cleanPhone = phone.replace(/[^0-9]/g, '');
-    if (cleanPhone.length < 7 || cleanPhone.length > 15)
+    if (cleanPhone.length < 7 || cleanPhone.length > 15) {
       return res.status(400).json({ success: false, error: 'Invalid phone number.' });
+    }
 
-    if (!pairingState.sock)
-      return res.status(503).json({ success: false, error: 'Bot is not connected yet. Try again in a moment.' });
-
-    if (pairingState.pairingInProgress[cleanPhone])
-      return res.status(429).json({ success: false, error: 'A pairing code was recently generated for this number. Please wait 60 seconds.' });
+    const token = cleanPhone;
+    
+    // Check if in-progress
+    if (sessionMap.has(token) && sessionMap.get(token).status === 'waiting') {
+      return res.status(429).json({ success: false, error: 'A pairing is already in progress for this number. Please wait.' });
+    }
 
     try {
-      pairingState.pairingInProgress[cleanPhone] = true;
-      setTimeout(() => { delete pairingState.pairingInProgress[cleanPhone]; }, 60000);
+      sessionMap.set(token, { status: 'waiting', sessionId: null });
       
-      const code = await pairingState.sock.requestPairingCode(cleanPhone);
-      const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
-      
-      console.log(`📲 Pairing code issued for +${cleanPhone}: ${formatted}`);
-      return res.json({ success: true, code: formatted });
+      const tempSessionFolder = path.join(process.cwd(), 'storage', 'temp_sessions', token);
+      if (fs.existsSync(tempSessionFolder)) {
+        fs.rmSync(tempSessionFolder, { recursive: true, force: true });
+      }
+      fs.mkdirSync(tempSessionFolder, { recursive: true });
+
+      const { state, saveCreds } = await useMultiFileAuthState(tempSessionFolder);
+      const { version } = await fetchLatestBaileysVersion();
+
+      const sock = makeWASocket({
+        logger: pino({ level: 'silent' }),
+        browser: ["VORTE-PRO", "Chrome", "1.0.0"],
+        auth: {
+          creds: state.creds,
+          keys: makeCacheableSignalKeyStore(state.keys, pino().child({ level: "silent" })),
+        },
+        version,
+      });
+
+      sock.ev.on("creds.update", saveCreds);
+
+      let codeRequested = false;
+
+      sock.ev.on("connection.update", async (update) => {
+        const { connection, lastDisconnect } = update;
+        
+        if (connection === 'open') {
+          console.log(`✅ Session connected for +${token}. Extracting Session ID...`);
+          try {
+            // Wait slight delay to ensure creds.json is fully written
+            setTimeout(() => {
+              const credsPath = path.join(tempSessionFolder, 'creds.json');
+              if (fs.existsSync(credsPath)) {
+                const creds = fs.readFileSync(credsPath);
+                const b64 = creds.toString('base64');
+                const sessionId = 'VORTE_PRO~' + b64;
+                
+                sessionMap.set(token, { status: 'ready', sessionId });
+                console.log(`🎉 Session IDs generated for +${token}`);
+                
+                // Cleanup connection and temporary files
+                sock.end(new Error('Session ready'));
+                setTimeout(() => fs.rmSync(tempSessionFolder, { recursive: true, force: true }), 1000);
+              } else {
+                sessionMap.set(token, { status: 'error', error: 'Credentials file not found.' });
+              }
+            }, 3000);
+          } catch(e) {
+            console.error('Error in session success handler:', e);
+            sessionMap.set(token, { status: 'error', error: 'Failed to extract session' });
+          }
+        } else if (connection === 'close') {
+           const reason = lastDisconnect?.error?.output?.statusCode;
+           if (reason !== DisconnectReason.loggedOut && sessionMap.get(token)?.status === 'waiting') {
+              console.log(`⚠️ Connection closed for ${token}: ${reason}`);
+           }
+        }
+      });
+
+      // Give Baileys a moment to initialize before requesting code
+      setTimeout(async () => {
+        try {
+          const code = await sock.requestPairingCode(cleanPhone);
+          const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
+          console.log(`📲 Pairing code issued for +${cleanPhone}: ${formatted}`);
+          if (!res.headersSent) {
+            res.json({ success: true, code: formatted, token });
+          }
+        } catch(err) {
+          console.error('Failed to request code:', err.message);
+          sessionMap.delete(token);
+          if (!res.headersSent) {
+            res.status(500).json({ success: false, error: 'Failed to generate pairing code' });
+          }
+        }
+      }, 2500);
+
     } catch (err) {
-      delete pairingState.pairingInProgress[cleanPhone];
-      console.error('❌ Pairing code error:', err.message);
-      return res.status(500).json({ success: false, error: 'Failed to generate pairing code.' });
+      console.error('❌ Generator error:', err);
+      sessionMap.delete(token);
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, error: 'Internal server error.' });
+      }
+    }
+  });
+
+  // Session Status API for Web Pairing
+  app.get('/api/session-status/:token', (req, res) => {
+    const { token } = req.params;
+    const sessionInfo = sessionMap.get(token);
+    
+    if (!sessionInfo) {
+      return res.status(404).json({ success: false, error: 'No active pairing session found. Please try again.' });
+    }
+
+    if (sessionInfo.status === 'ready') {
+      const sessionId = sessionInfo.sessionId;
+      return res.json({ success: true, status: 'ready', sessionId });
+    } else if (sessionInfo.status === 'error') {
+      sessionMap.delete(token);
+      return res.json({ success: false, error: sessionInfo.error });
+    } else {
+      return res.json({ success: true, status: 'waiting' });
     }
   });
 
   // Status API
   app.get('/api/status', (req, res) => {
     res.json({
-      connected: !!pairingState.sock,
       botName: config.botName,
-      uptime: Math.floor(process.uptime())
+      uptime: Math.floor(process.uptime()),
+      activePairings: sessionMap.size
     });
   });
 
@@ -95,7 +201,7 @@ function setupServer() {
 
   // Start listener
   const server = app.listen(config.port, '0.0.0.0', () => {
-    console.log(`🌐 Web server running on port ${config.port}`);
+    console.log(`🌐 Web server Session Generator running on port ${config.port}`);
   });
 
   return { app, server, pairingState };
