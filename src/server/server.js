@@ -140,7 +140,6 @@ function setupServer() {
                   isFinished = true;
                   
                   // Cleanup connection and temporary files
-                  try { await sock.logout(); } catch(e) {}
                   try { sock.ws.close(); } catch(e) {}
                   
                   setTimeout(() => {
