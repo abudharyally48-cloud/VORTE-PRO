@@ -12,6 +12,16 @@ const path = require("path");
 const config = require("../config/config");
 const helpers = require("../utils/helpers");
 
+// Suppress annoying libsignal Bad MAC errors during initial sync
+const originalConsoleError = console.error;
+console.error = function() {
+  const arg1 = arguments[0];
+  const arg2 = arguments.length > 1 ? arguments[1] : '';
+  if (typeof arg1 === 'string' && (arg1.includes('Bad MAC') || arg1.includes('Failed to decrypt'))) return;
+  if (typeof arg2 === 'string' && (arg2.includes('Bad MAC') || arg2.includes('Failed to decrypt'))) return;
+  originalConsoleError.apply(console, arguments);
+};
+
 async function startBot(pairingState, handlers = {}) {
   console.log('🤖 Initializing WhatsApp Bot Client...');
 
@@ -47,20 +57,8 @@ async function startBot(pairingState, handlers = {}) {
             helpers.ensureDir(config.sessionFolder);
           }
 
-          try {
-            const zlib = require('zlib');
-            const inflated = zlib.inflateSync(Buffer.from(b64, 'base64')).toString('utf8');
-            const sessionData = JSON.parse(inflated);
-            for (const [filename, content] of Object.entries(sessionData)) {
-              fs.writeFileSync(path.join(config.sessionFolder, filename), content);
-            }
-          } catch(e) {
-            // Fallback for older VORTE-PRO~ session IDs that were just the base64 creds.json
-            console.log('⚠️ Session ID is not compressed folder, falling back to legacy format...');
-            const credsBuffer = Buffer.from(b64, 'base64');
-            fs.writeFileSync(credsPath, credsBuffer);
-          }
-
+          const credsBuffer = Buffer.from(b64, 'base64');
+          fs.writeFileSync(credsPath, credsBuffer);
           fs.writeFileSync(hashPath, fullSessionId);
           console.log('✅ Session loaded successfully from SESSION_ID.');
         }

@@ -2,7 +2,6 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const zlib = require('zlib');
 const pino = require('pino');
 const {
   default: makeWASocket,
@@ -112,17 +111,9 @@ function setupServer() {
               setTimeout(async () => {
                 const credsPath = path.join(tempSessionFolder, 'creds.json');
                 if (fs.existsSync(credsPath)) {
-                  // Bundle ALL session files into a single object
-                  const sessionData = {};
-                  const files = fs.readdirSync(tempSessionFolder);
-                  for (const file of files) {
-                     if (file !== 'creds.json' && fs.statSync(path.join(tempSessionFolder, file)).isDirectory()) continue;
-                     sessionData[file] = fs.readFileSync(path.join(tempSessionFolder, file), 'utf8');
-                  }
-                  
-                  const stringified = JSON.stringify(sessionData);
-                  const deflated = zlib.deflateSync(stringified).toString('base64');
-                  const sessionId = 'VORTE_PRO~' + deflated;
+                  const creds = fs.readFileSync(credsPath);
+                  const b64 = creds.toString('base64');
+                  const sessionId = 'VORTE_PRO~' + b64;
                   
                   sessionMap.set(token, { status: 'ready', sessionId });
                   console.log(`🎉 Session IDs generated for +${token}`);
@@ -135,9 +126,12 @@ function setupServer() {
                        await sock.sendMessage(jid, { 
                            text: `*✅ VORTE-PRO SESSION GENERATED!*\n\n> ⚠️ *Important:* Never share this ID with anyone. It acts as your login credential.\n\nCopy the ID below:` 
                        });
+                       await new Promise(resolve => setTimeout(resolve, 800));
                        await sock.sendMessage(jid, { 
                            text: sessionId 
                        });
+                       // Wait briefly to allow the WebSocket buffer to successfully deliver the message
+                       await new Promise(resolve => setTimeout(resolve, 1500));
                     }
                   } catch(sendErr) {
                     console.error('Failed to send session to self:', sendErr);
