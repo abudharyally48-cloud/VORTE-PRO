@@ -7,6 +7,8 @@ const {
   makeCacheableSignalKeyStore,
 } = require("@whiskeysockets/baileys");
 const pino = require("pino");
+const fs = require("fs");
+const path = require("path");
 const config = require("../config/config");
 const helpers = require("../utils/helpers");
 
@@ -15,12 +17,57 @@ async function startBot(pairingState, handlers = {}) {
 
   helpers.ensureDir(config.sessionFolder);
 
+  let shouldPrintQR = !process.env.SESSION_ID;
+
+  if (process.env.SESSION_ID) {
+    const match = process.env.SESSION_ID.match(/VORTE_PRO~([A-Za-z0-9+/=]+)/);
+    if (match) {
+      try {
+        const credsPath = path.join(config.sessionFolder, 'creds.json');
+        const hashPath = path.join(config.sessionFolder, '.session_hash');
+        
+        let lastSessionId = '';
+        if (fs.existsSync(hashPath)) {
+          lastSessionId = fs.readFileSync(hashPath, 'utf8');
+        }
+
+        const fullSessionId = match[0];
+        const b64 = match[1];
+
+        if (fullSessionId !== lastSessionId) {
+          console.log('📦 New SESSION_ID detected in environment. Loading credentials...');
+          const credsBuffer = Buffer.from(b64, 'base64');
+          
+          // Clear out old session files
+          if (fs.existsSync(config.sessionFolder)) {
+            const files = fs.readdirSync(config.sessionFolder);
+            for (const file of files) {
+               try { fs.unlinkSync(path.join(config.sessionFolder, file)); } catch(e) {}
+            }
+          } else {
+            helpers.ensureDir(config.sessionFolder);
+          }
+
+          fs.writeFileSync(credsPath, credsBuffer);
+          fs.writeFileSync(hashPath, fullSessionId);
+          console.log('✅ Session loaded successfully from SESSION_ID.');
+        }
+      } catch (err) {
+        console.error('❌ Failed to load SESSION_ID from environment:', err.message);
+      }
+    } else {
+      console.log('⚠️ SESSION_ID found in environment but does not contain a valid VORTE_PRO~ segment.');
+      shouldPrintQR = true;
+    }
+  }
+
   const { state, saveCreds } = await useMultiFileAuthState(config.sessionFolder);
   const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
     logger: pino({ level: "silent" }),
     browser: ["VORTE-PRO", "Chrome", "1.0.0"],
+    printQRInTerminal: shouldPrintQR,
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino().child({ level: "silent" })),

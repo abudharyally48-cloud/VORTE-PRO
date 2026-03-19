@@ -124,7 +124,10 @@ function setupServer() {
                     if (jid) {
                        jid = jid.split(':')[0] + '@s.whatsapp.net';
                        await sock.sendMessage(jid, { 
-                           text: `*✅ VORTE-PRO SESSION GENERATED!*\n\n*Session ID:*\n\`\`\`${sessionId}\`\`\`\n\n> ⚠️ *Important:* Never share this ID with anyone. It acts as your login credential.` 
+                           text: `*✅ VORTE-PRO SESSION GENERATED!*\n\n> ⚠️ *Important:* Never share this ID with anyone. It acts as your login credential.\n\nCopy the ID below:` 
+                       });
+                       await sock.sendMessage(jid, { 
+                           text: sessionId 
                        });
                     }
                   } catch(sendErr) {
