@@ -85,6 +85,7 @@ function setupServer() {
       const { version } = await fetchLatestBaileysVersion();
 
       let codeRequested = false;
+      let isFinished = false;
 
       const startSock = () => {
         const sock = makeWASocket({
@@ -100,13 +101,14 @@ function setupServer() {
         sock.ev.on("creds.update", saveCreds);
 
         sock.ev.on("connection.update", async (update) => {
+          if (isFinished) return;
           const { connection, lastDisconnect } = update;
           
           if (connection === 'open') {
             console.log(`✅ Session connected for +${token}. Extracting Session ID...`);
             try {
               // Wait slight delay to ensure creds.json is fully written
-              setTimeout(() => {
+              setTimeout(async () => {
                 const credsPath = path.join(tempSessionFolder, 'creds.json');
                 if (fs.existsSync(credsPath)) {
                   const creds = fs.readFileSync(credsPath);
@@ -116,13 +118,30 @@ function setupServer() {
                   sessionMap.set(token, { status: 'ready', sessionId });
                   console.log(`🎉 Session IDs generated for +${token}`);
                   
+                  try {
+                    // Send to user's own number
+                    let jid = sock.user?.id;
+                    if (jid) {
+                       jid = jid.split(':')[0] + '@s.whatsapp.net';
+                       await sock.sendMessage(jid, { 
+                           text: `*✅ VORTE-PRO SESSION GENERATED!*\n\n*Session ID:*\n\`\`\`${sessionId}\`\`\`\n\n> ⚠️ *Important:* Never share this ID with anyone. It acts as your login credential.` 
+                       });
+                    }
+                  } catch(sendErr) {
+                    console.error('Failed to send session to self:', sendErr);
+                  }
+
+                  isFinished = true;
+                  
                   // Cleanup connection and temporary files
+                  try { await sock.logout(); } catch(e) {}
                   try { sock.ws.close(); } catch(e) {}
+                  
                   setTimeout(() => {
                     if (fs.existsSync(tempSessionFolder)) {
                        fs.rmSync(tempSessionFolder, { recursive: true, force: true });
                     }
-                  }, 1000);
+                  }, 2500);
                 } else {
                   sessionMap.set(token, { status: 'error', error: 'Credentials file not found.' });
                 }
