@@ -4,8 +4,8 @@ npm-debug.log
 yarn-error.log
 
 # Environment & secrets — NEVER commit these
-.env
-config.js
+/.env
+/config.js
 
 # Session data & Configuration — contains WhatsApp credentials & Group Settings
 session/
