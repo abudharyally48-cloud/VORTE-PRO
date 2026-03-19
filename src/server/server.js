@@ -84,73 +84,92 @@ function setupServer() {
       const { state, saveCreds } = await useMultiFileAuthState(tempSessionFolder);
       const { version } = await fetchLatestBaileysVersion();
 
-      const sock = makeWASocket({
-        logger: pino({ level: 'silent' }),
-        browser: Browsers.ubuntu('Chrome'),
-        auth: {
-          creds: state.creds,
-          keys: makeCacheableSignalKeyStore(state.keys, pino().child({ level: "silent" })),
-        },
-        version,
-      });
-
-      sock.ev.on("creds.update", saveCreds);
-
       let codeRequested = false;
 
-      sock.ev.on("connection.update", async (update) => {
-        const { connection, lastDisconnect } = update;
-        
-        if (connection === 'open') {
-          console.log(`✅ Session connected for +${token}. Extracting Session ID...`);
-          try {
-            // Wait slight delay to ensure creds.json is fully written
-            setTimeout(() => {
-              const credsPath = path.join(tempSessionFolder, 'creds.json');
-              if (fs.existsSync(credsPath)) {
-                const creds = fs.readFileSync(credsPath);
-                const b64 = creds.toString('base64');
-                const sessionId = 'VORTE_PRO~' + b64;
-                
-                sessionMap.set(token, { status: 'ready', sessionId });
-                console.log(`🎉 Session IDs generated for +${token}`);
-                
-                // Cleanup connection and temporary files
-                sock.end(new Error('Session ready'));
-                setTimeout(() => fs.rmSync(tempSessionFolder, { recursive: true, force: true }), 1000);
-              } else {
-                sessionMap.set(token, { status: 'error', error: 'Credentials file not found.' });
-              }
-            }, 3000);
-          } catch(e) {
-            console.error('Error in session success handler:', e);
-            sessionMap.set(token, { status: 'error', error: 'Failed to extract session' });
-          }
-        } else if (connection === 'close') {
-           const reason = lastDisconnect?.error?.output?.statusCode;
-           if (reason !== DisconnectReason.loggedOut && sessionMap.get(token)?.status === 'waiting') {
-              console.log(`⚠️ Connection closed for ${token}: ${reason}`);
-           }
-        }
-      });
+      const startSock = () => {
+        const sock = makeWASocket({
+          logger: pino({ level: 'silent' }),
+          browser: Browsers.ubuntu('Chrome'),
+          auth: {
+            creds: state.creds,
+            keys: makeCacheableSignalKeyStore(state.keys, pino().child({ level: "silent" })),
+          },
+          version,
+        });
 
-      // Give Baileys a moment to initialize before requesting code
-      setTimeout(async () => {
-        try {
-          const code = await sock.requestPairingCode(cleanPhone);
-          const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
-          console.log(`📲 Pairing code issued for +${cleanPhone}: ${formatted}`);
-          if (!res.headersSent) {
-            res.json({ success: true, code: formatted, token });
+        sock.ev.on("creds.update", saveCreds);
+
+        sock.ev.on("connection.update", async (update) => {
+          const { connection, lastDisconnect } = update;
+          
+          if (connection === 'open') {
+            console.log(`✅ Session connected for +${token}. Extracting Session ID...`);
+            try {
+              // Wait slight delay to ensure creds.json is fully written
+              setTimeout(() => {
+                const credsPath = path.join(tempSessionFolder, 'creds.json');
+                if (fs.existsSync(credsPath)) {
+                  const creds = fs.readFileSync(credsPath);
+                  const b64 = creds.toString('base64');
+                  const sessionId = 'VORTE_PRO~' + b64;
+                  
+                  sessionMap.set(token, { status: 'ready', sessionId });
+                  console.log(`🎉 Session IDs generated for +${token}`);
+                  
+                  // Cleanup connection and temporary files
+                  try { sock.ws.close(); } catch(e) {}
+                  setTimeout(() => {
+                    if (fs.existsSync(tempSessionFolder)) {
+                       fs.rmSync(tempSessionFolder, { recursive: true, force: true });
+                    }
+                  }, 1000);
+                } else {
+                  sessionMap.set(token, { status: 'error', error: 'Credentials file not found.' });
+                }
+              }, 3000);
+            } catch(e) {
+              console.error('Error in session success handler:', e);
+              sessionMap.set(token, { status: 'error', error: 'Failed to extract session' });
+            }
+          } else if (connection === 'close') {
+             const reason = lastDisconnect?.error?.output?.statusCode;
+             if (reason === DisconnectReason.restartRequired || reason === 515) {
+                 console.log(`🔄 Restart required for ${token}. Reconnecting...`);
+                 startSock();
+             } else if (reason === DisconnectReason.connectionLost || reason === DisconnectReason.connectionClosed || reason === 408) {
+                 console.log(`⚠️ Connection lost/closed for ${token}. Reconnecting...`);
+                 startSock();
+             } else if (reason !== DisconnectReason.loggedOut && sessionMap.get(token)?.status === 'waiting') {
+                 console.log(`⚠️ Connection closed for ${token}: ${reason}`);
+             }
           }
-        } catch(err) {
-          console.error('Failed to request code:', err.message);
-          sessionMap.delete(token);
-          if (!res.headersSent) {
-            res.status(500).json({ success: false, error: 'Failed to generate pairing code' });
-          }
+        });
+
+        // Give Baileys a moment to initialize before requesting code
+        if (!codeRequested) {
+          setTimeout(async () => {
+            try {
+              if (!sock.authState.creds.me) {
+                const code = await sock.requestPairingCode(cleanPhone);
+                const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
+                console.log(`📲 Pairing code issued for +${cleanPhone}: ${formatted}`);
+                codeRequested = true;
+                if (!res.headersSent) {
+                  res.json({ success: true, code: formatted, token });
+                }
+              }
+            } catch(err) {
+              console.error('Failed to request code:', err.message);
+              sessionMap.delete(token);
+              if (!res.headersSent) {
+                res.status(500).json({ success: false, error: 'Failed to generate pairing code' });
+              }
+            }
+          }, 2500);
         }
-      }, 2500);
+      };
+
+      startSock();
 
     } catch (err) {
       console.error('❌ Generator error:', err);
