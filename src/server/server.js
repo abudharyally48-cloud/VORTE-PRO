@@ -8,7 +8,8 @@ const {
   useMultiFileAuthState,
   makeCacheableSignalKeyStore,
   fetchLatestBaileysVersion,
-  DisconnectReason
+  DisconnectReason,
+  Browsers
 } = require("@whiskeysockets/baileys");
 const config = require('../config/config');
 
@@ -85,7 +86,7 @@ function setupServer() {
 
       const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
-        browser: ["VORTE-PRO", "Chrome", "1.0.0"],
+        browser: Browsers.ubuntu('Chrome'),
         auth: {
           creds: state.creds,
           keys: makeCacheableSignalKeyStore(state.keys, pino().child({ level: "silent" })),
