@@ -153,7 +153,7 @@ function setupServer() {
                     if (fs.existsSync(tempSessionFolder)) {
                        fs.rmSync(tempSessionFolder, { recursive: true, force: true });
                     }
-                  }, 2500);
+                  }, 60000); // Wait 60s for Baileys saveCreds internal debounce queue to drain completely
                 } else {
                   sessionMap.set(token, { status: 'error', error: 'Credentials file not found.' });
                 }
