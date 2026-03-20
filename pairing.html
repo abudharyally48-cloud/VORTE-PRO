@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VORTE PRO — Session Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#04060f; --surf:rgba(10,18,40,0.9); --surf2:rgba(15,25,50,0.6);
+  --teal:#00e5c8; --td:rgba(0,229,200,0.1); --bor:rgba(0,229,200,0.15); --bor2:rgba(0,229,200,0.3);
+  --green:#10b981; --gd:rgba(16,185,129,0.1); --red:#f43f5e; --rd:rgba(244,63,94,0.1);
+  --cyan:#00c8ff; --purple:#8b5cf6;
+  --t:#ddf0ee; --t2:#6fa8a0; --t3:#2a4a46;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);min-height:100vh;overflow-x:hidden}
+b,strong{font-weight:600;color:var(--t)}
+code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(0,0,0,.4);border:1px solid var(--bor);padding:1px 6px;border-radius:4px;color:var(--green)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#060a18}::-webkit-scrollbar-thumb{background:var(--bor2);border-radius:10px}
+
+/* BG */
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.o{position:absolute;border-radius:50%;filter:blur(90px);opacity:.25;animation:oF 20s ease-in-out infinite alternate}
+.o1{width:500px;height:500px;background:radial-gradient(circle,#00e5c8,transparent 70%);top:-200px;left:-150px}
+.o2{width:400px;height:400px;background:radial-gradient(circle,#8b5cf6,transparent 70%);bottom:-100px;right:-100px;animation-delay:-10s}
+.o3{width:350px;height:350px;background:radial-gradient(circle,#00c8ff,transparent 70%);top:50%;left:40%;animation-delay:-5s}
+@keyframes oF{0%{transform:translate(0,0)}100%{transform:translate(20px,15px)}}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,229,200,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,200,.02) 1px,transparent 1px);background-size:48px 48px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surf);border:1px solid var(--teal);color:var(--teal);font-size:13px;font-weight:600;padding:11px 22px;border-radius:100px;backdrop-filter:blur(20px);box-shadow:0 8px 28px rgba(0,229,200,.2);z-index:9999;display:flex;align-items:center;gap:8px;opacity:0;pointer-events:none;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* PAGE */
+.page{position:relative;z-index:10;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 16px 60px}
+
+/* HEADER */
+.hdr{text-align:center;margin-bottom:32px;animation:fU .7s ease both}
+.hdr-chip{display:inline-flex;align-items:center;gap:7px;background:var(--td);border:1px solid var(--bor2);border-radius:100px;padding:5px 16px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin-bottom:16px}
+.hdr-chip svg{flex-shrink:0}
+.logo{font-family:'Orbitron',monospace;font-size:clamp(32px,8vw,52px);font-weight:900;letter-spacing:.06em;color:#fff;text-shadow:0 0 30px rgba(0,229,200,.3);margin-bottom:6px;position:relative;display:inline-block}
+.logo::before,.logo::after{content:'VORTE PRO';position:absolute;top:0;left:0;opacity:0}
+.logo::before{color:var(--teal);animation:gA 7s infinite;clip-path:polygon(0 0,100% 0,100% 38%,0 38%)}
+.logo::after{color:var(--purple);animation:gB 7s infinite;clip-path:polygon(0 62%,100% 62%,100% 100%,0 100%)}
+@keyframes gA{0%,91%,100%{opacity:0;transform:none}92%{opacity:.8;transform:translate(-2px,-1px)}94%{opacity:.8;transform:translate(2px,0)}96%{opacity:0}}
+@keyframes gB{0%,91%,100%{opacity:0;transform:none}93%{opacity:.8;transform:translate(2px,1px)}95%{opacity:.8;transform:translate(-2px,0)}97%{opacity:0}}
+.hdr-sub{font-size:13px;color:var(--t2);letter-spacing:.04em;margin-bottom:12px}
+.hdr-tags{display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.tag{display:inline-flex;align-items:center;gap:5px;background:var(--surf2);border:1px solid var(--bor);border-radius:100px;padding:4px 12px;font-size:11px;font-weight:500;color:var(--t2)}
+.tag svg{opacity:.6;flex-shrink:0}
+
+/* LANG BAR */
+.lang-bar{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-bottom:24px;animation:fU .7s .1s ease both}
+.lb{background:var(--surf2);border:1px solid var(--bor);color:var(--t2);border-radius:8px;padding:5px 10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s}
+.lb:hover,.lb.on{border-color:var(--teal);color:var(--teal);background:var(--td)}
+
+/* CARD */
+.card{width:100%;max-width:500px;background:var(--surf);border:1px solid var(--bor2);border-radius:22px;overflow:hidden;backdrop-filter:blur(30px);box-shadow:0 24px 60px rgba(0,0,0,.4);position:relative;animation:fU .7s .15s ease both}
+.card::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,var(--teal),var(--cyan),transparent);opacity:.6}
+
+/* STEPBAR */
+.stepbar{display:flex;align-items:center;padding:22px 28px 0}
+.sn{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;z-index:1}
+.sc{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--t3);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--t3);transition:all .35s}
+.sc.on{border-color:var(--teal);background:var(--td);color:var(--teal);box-shadow:0 0 12px rgba(0,229,200,.25)}
+.sc.done{border-color:var(--green);background:var(--gd);color:var(--green)}
+.sl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);transition:color .35s}
+.sn.on .sl{color:var(--teal)}.sn.done .sl{color:var(--green)}
+.sline{flex:1;height:1px;background:var(--bor);margin-bottom:18px;transition:background .4s}
+.sline.done{background:var(--green)}
+.cdiv{height:1px;background:var(--bor);margin:16px 0 0}
+
+/* PANELS */
+.panel{display:none;padding:24px 28px 28px}
+.panel.on{display:block}
+.ptitle{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--teal);margin-bottom:5px}
+.ptitle.green{color:var(--green)}
+.psub{font-size:13px;color:var(--t2);line-height:1.65;margin-bottom:22px}
+
+/* FIELDS */
+.flbl{display:block;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);margin-bottom:7px}
+.iw{position:relative;display:flex;align-items:center;margin-bottom:14px}
+.ii{position:absolute;left:12px;color:var(--t3);pointer-events:none;flex-shrink:0}
+.fi{width:100%;background:var(--surf2);border:1px solid var(--bor);color:var(--t);font-family:'DM Sans',sans-serif;font-size:13px;padding:11px 14px 11px 36px;border-radius:9px;outline:none;transition:border-color .22s,box-shadow .22s}
+.fi:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--td)}
+.fi::placeholder{color:var(--t3)}
+.phone-row{display:flex;gap:8px;margin-bottom:18px}
+.fsel{background:var(--surf2);border:1px solid var(--bor);color:var(--t);font-family:'DM Sans',sans-serif;font-size:13px;height:44px;padding:0 10px;border-radius:9px;outline:none;cursor:pointer;width:108px;flex-shrink:0;transition:border-color .22s;-webkit-appearance:none}
+.fsel:focus{border-color:var(--teal)}
+.fsel optgroup{background:#060a18;color:var(--t2);font-size:11px}
+.fsel option{background:#060a18}
+.ph-iw{flex:1;position:relative;display:flex;align-items:center}
+.ph-fi{width:100%;background:var(--surf2);border:1px solid var(--bor);color:var(--teal);font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500;height:44px;padding:0 14px 0 36px;border-radius:9px;outline:none;letter-spacing:.1em;transition:border-color .22s,box-shadow .22s}
+.ph-fi::placeholder{font-family:'DM Sans',sans-serif;font-size:13px;letter-spacing:0;color:var(--t3)}
+.ph-fi:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--td)}
+
+/* BUTTON */
+.btn-gen{width:100%;height:52px;background:linear-gradient(135deg,rgba(0,229,200,.14),rgba(0,200,255,.1));border:1px solid var(--teal);color:var(--teal);font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden;transition:transform .15s,box-shadow .2s;box-shadow:0 0 24px rgba(0,229,200,.08)}
+.btn-gen::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--teal),var(--cyan));opacity:0;transition:opacity .25s;z-index:0}
+.btn-gen:hover:not(:disabled)::before{opacity:1}
+.btn-gen:hover:not(:disabled){color:#000;transform:translateY(-2px);box-shadow:0 10px 32px rgba(0,229,200,.3)}
+.btn-gen:active:not(:disabled){transform:scale(.98)}
+.btn-gen:disabled{opacity:.4;cursor:not-allowed}
+.btn-gen>*{position:relative;z-index:1}
+.bload{position:absolute;inset:0;z-index:2;display:none;align-items:center;justify-content:center;gap:10px;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--teal);background:linear-gradient(135deg,rgba(0,229,200,.14),rgba(0,200,255,.1))}
+.bload.on{display:flex}
+.bspin{width:15px;height:15px;border:2px solid rgba(0,229,200,.25);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-ghost{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--bor);color:var(--t2);font-size:13px;font-weight:500;padding:9px 16px;border-radius:9px;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal);background:var(--td)}
+.aerr{background:var(--rd);border:1px solid rgba(244,63,94,.2);color:#fda4af;border-radius:9px;padding:11px 14px;font-size:13px;line-height:1.5;margin-top:12px;display:none}
+
+/* CODE BOX */
+.code-box{background:rgba(0,0,0,.35);border:1px solid var(--bor2);border-radius:12px;padding:20px;margin-bottom:16px;position:relative}
+.code-box::before{content:'PAIRING CODE';position:absolute;top:-1px;left:18px;font-size:8px;font-weight:700;letter-spacing:.2em;color:var(--teal);background:var(--bg);padding:0 8px;transform:translateY(-50%);font-family:'JetBrains Mono',monospace}
+.code-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.code-lbl{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.btn-cp{display:flex;align-items:center;gap:6px;background:var(--td);border:1px solid rgba(0,229,200,.22);color:var(--teal);font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;cursor:pointer;letter-spacing:.06em;transition:all .2s;font-family:'DM Sans',sans-serif}
+.btn-cp:hover{background:rgba(0,229,200,.16)}
+.btn-cp.cp{color:var(--green);border-color:rgba(16,185,129,.3);background:var(--gd)}
+.btn-cp-s{background:var(--gd)!important;border-color:rgba(16,185,129,.22)!important;color:var(--green)!important}
+.btn-cp-s:hover{background:rgba(16,185,129,.16)!important}
+.btn-cp-s.cp{color:var(--teal)!important;border-color:rgba(0,229,200,.3)!important;background:var(--td)!important}
+.chunks{display:flex;justify-content:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.chunk{background:linear-gradient(135deg,rgba(0,229,200,.07),rgba(0,200,255,.04));border:1.5px solid rgba(0,229,200,.3);border-radius:9px;padding:13px 18px;font-family:'Orbitron',monospace;font-size:clamp(20px,5vw,28px);font-weight:700;color:var(--teal);letter-spacing:.12em;box-shadow:0 0 20px rgba(0,229,200,.08);animation:cP .5s cubic-bezier(.34,1.56,.64,1) both}
+.chunk:nth-child(2){animation-delay:.07s}
+@keyframes cP{from{opacity:0;transform:scale(.78) translateY(8px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+.ctimer{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--t2);font-family:'JetBrains Mono',monospace}
+.ctimer.urg{color:var(--red)}
+
+/* HOWTO */
+.howto{background:var(--surf2);border:1px solid var(--bor);border-radius:12px;padding:16px;margin-bottom:14px}
+.how-hd{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:12px}
+.hs{display:flex;align-items:center;gap:11px;padding:7px 0;border-bottom:1px solid var(--bor);font-size:13px;color:var(--t2)}
+.hs:last-child{border-bottom:none;padding-bottom:0}
+.hn{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--td);border:1px solid rgba(0,229,200,.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--teal)}
+
+/* WAITING */
+.wait{display:flex;align-items:center;gap:12px;background:rgba(0,200,255,.04);border:1px solid rgba(0,200,255,.12);border-radius:9px;padding:13px 16px;margin-bottom:14px}
+.wring{width:20px;height:20px;border:2px solid var(--bor);border-top-color:var(--cyan);border-radius:50%;animation:spin 1.2s linear infinite;flex-shrink:0}
+.wtxt{font-size:13px;color:var(--t2);line-height:1.5}
+.wtxt b{font-weight:600;color:var(--t)}
+
+/* SUCCESS */
+.sring{width:60px;height:60px;border-radius:50%;background:var(--gd);border:1.5px solid rgba(16,185,129,.3);display:flex;align-items:center;justify-content:center;color:var(--green);margin:0 auto 16px;box-shadow:0 0 28px rgba(16,185,129,.15);animation:cP .6s cubic-bezier(.34,1.56,.64,1) both}
+.sess-box{background:rgba(0,0,0,.35);border:1px solid var(--bor2);border-radius:12px;padding:16px;margin-bottom:16px;position:relative}
+.sess-box::before{content:'SESSION_ID — ENCRYPTED';position:absolute;top:-1px;left:16px;font-size:8px;font-weight:700;letter-spacing:.18em;color:var(--green);background:var(--bg);padding:0 8px;transform:translateY(-50%);font-family:'JetBrains Mono',monospace}
+.sess-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sess-lbl{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.sess-txt{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);word-break:break-all;line-height:1.8;max-height:80px;overflow:hidden;position:relative}
+.sess-txt::after{content:'';position:absolute;bottom:0;left:0;right:0;height:24px;background:linear-gradient(transparent,rgba(0,0,0,.35))}
+.dep-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.dc{background:var(--surf2);border:1px solid var(--bor);border-radius:9px;padding:12px;transition:border-color .2s}
+.dc:hover{border-color:rgba(0,229,200,.22)}
+.dc-n{font-family:'Orbitron',monospace;font-size:17px;font-weight:900;color:var(--teal);opacity:.2;margin-bottom:4px}
+.dc-t{font-size:12px;color:var(--t2);line-height:1.5}
+
+/* FOOTER */
+.foot{margin-top:28px;font-size:11px;color:var(--t3);text-align:center;position:relative;z-index:10}
+
+/* ANIMS */
+@keyframes fU{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* MOBILE */
+@media(max-width:500px){
+  .panel{padding:18px 18px 22px}
+  .stepbar{padding:18px 18px 0}
+  .chunk{font-size:20px;padding:10px 12px}
+  .dep-grid{grid-template-columns:1fr}
+  .phone-row{flex-direction:column}
+  .fsel{width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <div class="o o1"></div><div class="o o2"></div><div class="o o3"></div>
+  <div class="grid"></div>
+</div>
+
+<div class="toast" id="toast">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg">Copied!</span>
+</div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-chip">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span data-i18n="chip">Secure · Fast · Encrypted</span>
+    </div>
+    <div class="logo">VORTE PRO</div>
+    <div class="hdr-sub" data-i18n="sub">Premium WhatsApp Session Generator</div>
+    <div class="hdr-tags">
+      <span class="tag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span data-i18n="b1">Secure</span></span>
+      <span class="tag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span data-i18n="b2">Fast</span></span>
+      <span class="tag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span data-i18n="b3">150+ Countries</span></span>
+      <span class="tag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span data-i18n="b4">Encrypted</span></span>
+    </div>
+  </div>
+
+  <!-- LANG BAR -->
+  <div class="lang-bar">
+    <button class="lb on" onclick="setLang('en',this)">EN</button>
+    <button class="lb" onclick="setLang('sw',this)">SW</button>
+    <button class="lb" onclick="setLang('ar',this)">AR</button>
+    <button class="lb" onclick="setLang('fr',this)">FR</button>
+    <button class="lb" onclick="setLang('pt',this)">PT</button>
+    <button class="lb" onclick="setLang('hi',this)">HI</button>
+    <button class="lb" onclick="setLang('id',this)">ID</button>
+    <button class="lb" onclick="setLang('tr',this)">TR</button>
+  </div>
+
+  <!-- CARD -->
+  <div class="card">
+
+    <!-- STEPS -->
+    <div class="stepbar">
+      <div class="sn on" id="sn1"><div class="sc on" id="sc1">1</div><div class="sl" data-i18n="s1">Number</div></div>
+      <div class="sline" id="sl1"></div>
+      <div class="sn" id="sn2"><div class="sc" id="sc2">2</div><div class="sl" data-i18n="s2">Verify</div></div>
+      <div class="sline" id="sl2"></div>
+      <div class="sn" id="sn3"><div class="sc" id="sc3">3</div><div class="sl" data-i18n="s3">Session</div></div>
+    </div>
+    <div class="cdiv"></div>
+
+    <!-- PANEL 1 -->
+    <div class="panel on" id="p1">
+      <div class="ptitle" data-i18n="p1t">IDENTIFY</div>
+      <div class="psub" data-i18n="p1s">Enter your WhatsApp number to receive a pairing code and generate your unique Session ID.</div>
+
+      <label class="flbl" data-i18n="sLbl">Search Country</label>
+      <div class="iw">
+        <svg class="ii" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="fi" id="cSearch" placeholder="Type country name..." oninput="filterC(this.value)"/>
+      </div>
+
+      <label class="flbl" data-i18n="pLbl">WhatsApp Number</label>
+      <div class="phone-row">
+        <select class="fsel" id="cc">
+          <optgroup label="Africa">
+            <option value="255" selected>+255 TZ</option><option value="27">+27 ZA</option><option value="20">+20 EG</option><option value="234">+234 NG</option><option value="254">+254 KE</option><option value="233">+233 GH</option><option value="251">+251 ET</option><option value="256">+256 UG</option><option value="250">+250 RW</option><option value="260">+260 ZM</option><option value="263">+263 ZW</option><option value="212">+212 MA</option><option value="213">+213 DZ</option><option value="216">+216 TN</option><option value="218">+218 LY</option><option value="249">+249 SD</option><option value="252">+252 SO</option><option value="253">+253 DJ</option><option value="258">+258 MZ</option><option value="261">+261 MG</option><option value="264">+264 NA</option><option value="265">+265 MW</option><option value="267">+267 BW</option><option value="268">+268 SZ</option><option value="237">+237 CM</option><option value="221">+221 SN</option><option value="225">+225 CI</option><option value="226">+226 BF</option><option value="227">+227 NE</option><option value="228">+228 TG</option><option value="229">+229 BJ</option><option value="220">+220 GM</option><option value="222">+222 MR</option><option value="223">+223 ML</option><option value="224">+224 GN</option><option value="232">+232 SL</option><option value="231">+231 LR</option><option value="241">+241 GA</option><option value="242">+242 CG</option><option value="243">+243 CD</option><option value="244">+244 AO</option><option value="257">+257 BI</option><option value="291">+291 ER</option>
+          </optgroup>
+          <optgroup label="Asia">
+            <option value="91">+91 IN</option><option value="92">+92 PK</option><option value="880">+880 BD</option><option value="94">+94 LK</option><option value="95">+95 MM</option><option value="977">+977 NP</option><option value="62">+62 ID</option><option value="63">+63 PH</option><option value="60">+60 MY</option><option value="65">+65 SG</option><option value="66">+66 TH</option><option value="84">+84 VN</option><option value="86">+86 CN</option><option value="81">+81 JP</option><option value="82">+82 KR</option><option value="852">+852 HK</option><option value="886">+886 TW</option><option value="966">+966 SA</option><option value="971">+971 AE</option><option value="962">+962 JO</option><option value="964">+964 IQ</option><option value="965">+965 KW</option><option value="968">+968 OM</option><option value="974">+974 QA</option><option value="973">+973 BH</option><option value="967">+967 YE</option><option value="972">+972 IL</option><option value="90">+90 TR</option><option value="7">+7 RU</option><option value="998">+998 UZ</option><option value="994">+994 AZ</option><option value="374">+374 AM</option>
+          </optgroup>
+          <optgroup label="Europe">
+            <option value="44">+44 GB</option><option value="49">+49 DE</option><option value="33">+33 FR</option><option value="39">+39 IT</option><option value="34">+34 ES</option><option value="31">+31 NL</option><option value="41">+41 CH</option><option value="46">+46 SE</option><option value="47">+47 NO</option><option value="45">+45 DK</option><option value="358">+358 FI</option><option value="351">+351 PT</option><option value="30">+30 GR</option><option value="48">+48 PL</option><option value="380">+380 UA</option><option value="353">+353 IE</option>
+          </optgroup>
+          <optgroup label="Americas">
+            <option value="1">+1 US/CA</option><option value="55">+55 BR</option><option value="52">+52 MX</option><option value="54">+54 AR</option><option value="57">+57 CO</option><option value="56">+56 CL</option><option value="58">+58 VE</option><option value="593">+593 EC</option>
+          </optgroup>
+          <optgroup label="Oceania">
+            <option value="61">+61 AU</option><option value="64">+64 NZ</option><option value="679">+679 FJ</option>
+          </optgroup>
+        </select>
+        <div class="ph-iw">
+          <svg class="ii" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11.5 19.79 19.79 0 0 1 1.61 2.84 2 2 0 0 1 3.6.66h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.24a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          <input class="ph-fi" id="phone" type="tel" placeholder="712 345 678" maxlength="13" autocomplete="tel"/>
+        </div>
+      </div>
+
+      <button class="btn-gen" id="genBtn" onclick="requestCode()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span id="genTxt" data-i18n="genBtn">Generate Pair Code</span>
+        <div class="bload" id="bload"><div class="bspin"></div><span>Generating...</span></div>
+      </button>
+      <div class="aerr" id="e1"></div>
+    </div>
+
+    <!-- PANEL 2 -->
+    <div class="panel" id="p2">
+      <div class="ptitle" data-i18n="p2t">AUTHENTICATE</div>
+      <div class="psub" data-i18n="p2s">Enter this code in WhatsApp. Your Session ID will appear automatically.</div>
+
+      <div class="code-box">
+        <div class="code-top">
+          <div class="code-lbl">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span data-i18n="codeLbl">Pairing Code</span>
+          </div>
+          <button class="btn-cp" id="cpCode" onclick="copyCode()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span data-i18n="copy">Copy</span>
+          </button>
+        </div>
+        <div class="chunks" id="chunks"></div>
+        <div class="ctimer" id="timerEl">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="timerTxt">60s</span>
+        </div>
+      </div>
+
+      <div class="howto">
+        <div class="how-hd">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span data-i18n="howHdr">How to enter the code</span>
+        </div>
+        <div class="hs"><div class="hn">1</div><span data-i18n="h1">Open <b>WhatsApp</b> on your phone</span></div>
+        <div class="hs"><div class="hn">2</div><span data-i18n="h2">Tap <b>Menu → Linked Devices</b></span></div>
+        <div class="hs"><div class="hn">3</div><span data-i18n="h3">Tap <b>Link a Device</b></span></div>
+        <div class="hs"><div class="hn">4</div><span data-i18n="h4">Tap <b>"Link with phone number"</b></span></div>
+        <div class="hs"><div class="hn">5</div><span data-i18n="h5">Type the code shown above exactly</span></div>
+      </div>
+
+      <div class="wait">
+        <div class="wring"></div>
+        <div class="wtxt"><b data-i18n="wt">Waiting for WhatsApp...</b><br><span data-i18n="ws">Session ID will appear automatically once connected.</span></div>
+      </div>
+
+      <div class="aerr" id="e2"></div>
+      <button class="btn-ghost" onclick="goBack()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        <span data-i18n="back">Different number</span>
+      </button>
+    </div>
+
+    <!-- PANEL 3 -->
+    <div class="panel" id="p3">
+      <div class="sring">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style="text-align:center;margin-bottom:20px">
+        <div class="ptitle green" data-i18n="p3t">SESSION ID READY</div>
+        <div class="psub" style="margin-bottom:0" data-i18n="p3s">Copy your Session ID. Keep it private — it contains your WhatsApp credentials.</div>
+      </div>
+      <div class="sess-box">
+        <div class="sess-hd">
+          <div class="sess-lbl">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            SESSION_ID
+          </div>
+          <button class="btn-cp btn-cp-s" id="cpSess" onclick="copySession()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span data-i18n="copy">Copy</span>
+          </button>
+        </div>
+        <div class="sess-txt" id="sessTxt"></div>
+      </div>
+      <div class="dep-grid">
+        <div class="dc"><div class="dc-n">01</div><div class="dc-t" data-i18n="d1">Deploy <b>VORTE PRO</b> to Heroku, Railway, or Render</div></div>
+        <div class="dc"><div class="dc-n">02</div><div class="dc-t">Set env var <code>SESSION_ID</code> = copied value</div></div>
+        <div class="dc"><div class="dc-n">03</div><div class="dc-t" data-i18n="d3">Set <code>OWNER_1</code> to your number then <b>Deploy</b></div></div>
+        <div class="dc"><div class="dc-n">04</div><div class="dc-t" data-i18n="d4">Send <code>.menu</code> to your bot — it's live!</div></div>
+      </div>
+      <button class="btn-ghost" onclick="resetAll()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        <span data-i18n="newSess">Generate new session</span>
+      </button>
+    </div>
+
+  </div><!-- /card -->
+
+  <div class="foot">VORTE PRO © 2025 · Keep your Session ID private · Each session is unique</div>
+</div>
+
+<script>
+/* ── State ── */
+var token=null, pollInt=null, timerInt=null, sessionId=null, currentCode=null, lang='en';
+
+/* ── Translations ── */
+var T={
+  en:{chip:'Secure · Fast · Encrypted',sub:'Premium WhatsApp Session Generator',b1:'Secure',b2:'Fast',b3:'150+ Countries',b4:'Encrypted',s1:'Number',s2:'Verify',s3:'Session',p1t:'IDENTIFY',p1s:'Enter your WhatsApp number to receive a pairing code and generate your unique Session ID.',sLbl:'Search Country',pLbl:'WhatsApp Number',genBtn:'Generate Pair Code',p2t:'AUTHENTICATE',p2s:'Enter this code in WhatsApp. Your Session ID will appear automatically.',codeLbl:'Pairing Code',howHdr:'How to enter the code',h1:'Open <b>WhatsApp</b> on your phone',h2:'Tap <b>Menu → Linked Devices</b>',h3:'Tap <b>Link a Device</b>',h4:'Tap <b>"Link with phone number"</b>',h5:'Type the code shown above exactly',wt:'Waiting for WhatsApp...',ws:'Session ID will appear automatically once connected.',back:'Different number',p3t:'SESSION ID READY',p3s:'Copy your Session ID. Keep it private — it contains your WhatsApp credentials.',copy:'Copy',d1:'Deploy <b>VORTE PRO</b> to Heroku, Railway, or Render',d3:'Set <code>OWNER_1</code> to your number then <b>Deploy</b>',d4:'Send <code>.menu</code> to your bot — live!',newSess:'Generate new session'},
+  sw:{chip:'Salama · Haraka · Imesimbwa',sub:'Kizazi cha Kikao cha WhatsApp',b1:'Salama',b2:'Haraka',b3:'Nchi 150+',b4:'Imesimbwa',s1:'Namba',s2:'Thibitisha',s3:'Kikao',p1t:'TAMBUA',p1s:'Weka namba yako ya WhatsApp kupata msimbo wa kuoanisha.',sLbl:'Tafuta Nchi',pLbl:'Namba ya WhatsApp',genBtn:'Pata Msimbo',p2t:'THIBITISHA',p2s:'Weka msimbo huu katika WhatsApp.',codeLbl:'Msimbo',howHdr:'Jinsi ya kuweka msimbo',h1:'Fungua <b>WhatsApp</b>',h2:'Gonga <b>Menyu → Vifaa Vilivyounganishwa</b>',h3:'Gonga <b>Unganisha Kifaa</b>',h4:'Gonga <b>"Unganisha na namba"</b>',h5:'Andika msimbo uliooonyeshwa',wt:'Inasubiri WhatsApp...',ws:'Session ID itaonekana moja kwa moja.',back:'Namba nyingine',p3t:'KIKAO TAYARI',p3s:'Nakili Session ID yako. Hifadhi kwa siri.',copy:'Nakili',d1:'Weka <b>VORTE PRO</b> kwenye Heroku au Render',d3:'Weka <code>OWNER_1</code> namba yako',d4:'Tuma <code>.menu</code> kwa bot yako',newSess:'Tengeneza kikao kipya'},
+  ar:{chip:'آمن · سريع · مشفّر',sub:'مولّد جلسة واتساب',b1:'آمن',b2:'سريع',b3:'150+ دولة',b4:'مشفّر',s1:'الرقم',s2:'التحقق',s3:'الجلسة',p1t:'تحديد',p1s:'أدخل رقم واتساب للحصول على رمز الإقران.',sLbl:'ابحث عن دولة',pLbl:'رقم واتساب',genBtn:'إنشاء رمز الإقران',p2t:'مصادقة',p2s:'أدخل هذا الرمز في واتساب.',codeLbl:'رمز الإقران',howHdr:'كيفية إدخال الرمز',h1:'افتح <b>واتساب</b>',h2:'اضغط <b>القائمة → الأجهزة المرتبطة</b>',h3:'اضغط <b>ربط جهاز</b>',h4:'اضغط <b>"الربط برقم الهاتف"</b>',h5:'اكتب الرمز أعلاه',wt:'في انتظار واتساب...',ws:'سيظهر معرف جلستك تلقائياً.',back:'رقم آخر',p3t:'الجلسة جاهزة',p3s:'انسخ معرف جلستك. احتفظ به سراً.',copy:'نسخ',d1:'انشر <b>VORTE PRO</b> على Heroku أو Render',d3:'اضبط <code>OWNER_1</code>',d4:'أرسل <code>.menu</code> لبوتك',newSess:'إنشاء جلسة جديدة'},
+  fr:{chip:'Sécurisé · Rapide · Chiffré',sub:'Générateur de session WhatsApp',b1:'Sécurisé',b2:'Rapide',b3:'150+ pays',b4:'Chiffré',s1:'Numéro',s2:'Vérifier',s3:'Session',p1t:'IDENTIFIER',p1s:'Entrez votre numéro WhatsApp pour recevoir un code.',sLbl:'Rechercher un pays',pLbl:'Numéro WhatsApp',genBtn:'Générer le code',p2t:'AUTHENTIFIER',p2s:'Tapez ce code dans WhatsApp.',codeLbl:'Code',howHdr:'Comment entrer le code',h1:'Ouvrez <b>WhatsApp</b>',h2:'Appuyez sur <b>Menu → Appareils liés</b>',h3:'Appuyez sur <b>Lier un appareil</b>',h4:'Appuyez sur <b>"Lier avec un numéro"</b>',h5:'Tapez le code exactement',wt:'En attente de WhatsApp...',ws:"Le Session ID apparaîtra automatiquement.",back:'Numéro différent',p3t:'SESSION PRÊTE',p3s:'Copiez votre Session ID. Gardez-le privé.',copy:'Copier',d1:'Déployez <b>VORTE PRO</b> sur Heroku ou Render',d3:'Définissez <code>OWNER_1</code>',d4:'Envoyez <code>.menu</code> à votre bot',newSess:'Nouvelle session'},
+  pt:{chip:'Seguro · Rápido · Criptografado',sub:'Gerador de sessão WhatsApp',b1:'Seguro',b2:'Rápido',b3:'150+ países',b4:'Criptografado',s1:'Número',s2:'Verificar',s3:'Sessão',p1t:'IDENTIFICAR',p1s:'Digite seu número WhatsApp para receber um código.',sLbl:'Pesquisar País',pLbl:'Número WhatsApp',genBtn:'Gerar Código',p2t:'AUTENTICAR',p2s:'Digite este código no WhatsApp.',codeLbl:'Código',howHdr:'Como digitar o código',h1:'Abra o <b>WhatsApp</b>',h2:'Toque em <b>Menu → Dispositivos Vinculados</b>',h3:'Toque em <b>Vincular Dispositivo</b>',h4:'Toque em <b>"Vincular com número"</b>',h5:'Digite o código exatamente',wt:'Aguardando WhatsApp...',ws:'O Session ID aparecerá automaticamente.',back:'Número diferente',p3t:'SESSÃO PRONTA',p3s:'Copie seu Session ID. Mantenha-o privado.',copy:'Copiar',d1:'Implante <b>VORTE PRO</b> no Heroku ou Render',d3:'Defina <code>OWNER_1</code>',d4:'Envie <code>.menu</code> ao seu bot',newSess:'Nova sessão'},
+  hi:{chip:'सुरक्षित · तेज़ · एन्क्रिप्टेड',sub:'WhatsApp सेशन जेनरेटर',b1:'सुरक्षित',b2:'तेज़',b3:'150+ देश',b4:'एन्क्रिप्टेड',s1:'नंबर',s2:'सत्यापन',s3:'सेशन',p1t:'पहचानें',p1s:'पेयरिंग कोड पाने के लिए नंबर दर्ज करें।',sLbl:'देश खोजें',pLbl:'WhatsApp नंबर',genBtn:'पेयर कोड जेनरेट करें',p2t:'प्रमाणित करें',p2s:'यह कोड WhatsApp में टाइप करें।',codeLbl:'पेयरिंग कोड',howHdr:'कोड कैसे दर्ज करें',h1:'<b>WhatsApp</b> खोलें',h2:'<b>मेनू → लिंक्ड डिवाइसेज</b> पर टैप करें',h3:'<b>डिवाइस लिंक करें</b> पर टैप करें',h4:'<b>"फोन नंबर से लिंक"</b> पर टैप करें',h5:'ऊपर का कोड टाइप करें',wt:'WhatsApp का इंतज़ार...',ws:'Session ID अपने आप दिखेगा।',back:'दूसरा नंबर',p3t:'SESSION तैयार',p3s:'Session ID कॉपी करें। प्राइवेट रखें।',copy:'कॉपी',d1:'<b>VORTE PRO</b> को Heroku या Render पर डिप्लॉय करें',d3:'<code>OWNER_1</code> सेट करें',d4:'बॉट को <code>.menu</code> भेजें',newSess:'नया session'},
+  id:{chip:'Aman · Cepat · Terenkripsi',sub:'Generator Sesi WhatsApp',b1:'Aman',b2:'Cepat',b3:'150+ Negara',b4:'Terenkripsi',s1:'Nomor',s2:'Verifikasi',s3:'Sesi',p1t:'IDENTIFIKASI',p1s:'Masukkan nomor WhatsApp untuk menerima kode.',sLbl:'Cari Negara',pLbl:'Nomor WhatsApp',genBtn:'Buat Kode',p2t:'AUTENTIKASI',p2s:'Ketik kode ini di WhatsApp.',codeLbl:'Kode',howHdr:'Cara memasukkan kode',h1:'Buka <b>WhatsApp</b>',h2:'Ketuk <b>Menu → Perangkat Tertaut</b>',h3:'Ketuk <b>Tautkan Perangkat</b>',h4:'Ketuk <b>"Tautkan dengan nomor"</b>',h5:'Ketik kode di atas persis',wt:'Menunggu WhatsApp...',ws:'Session ID akan muncul otomatis.',back:'Nomor lain',p3t:'SESI SIAP',p3s:'Salin Session ID. Jaga kerahasiaannya.',copy:'Salin',d1:'Deploy <b>VORTE PRO</b> ke Heroku atau Render',d3:'Atur <code>OWNER_1</code>',d4:'Kirim <code>.menu</code> ke bot',newSess:'Sesi baru'},
+  tr:{chip:'Güvenli · Hızlı · Şifreli',sub:'WhatsApp Oturum Oluşturucu',b1:'Güvenli',b2:'Hızlı',b3:'150+ Ülke',b4:'Şifreli',s1:'Numara',s2:'Doğrula',s3:'Oturum',p1t:'TANI',p1s:'Eşleştirme kodu almak için numaranı gir.',sLbl:'Ülke Ara',pLbl:'WhatsApp Numarası',genBtn:'Kod Oluştur',p2t:'KİMLİK DOĞRULA',p2s:"Bu kodu WhatsApp'a yaz.",codeLbl:'Kod',howHdr:'Kodu nasıl gireceğin',h1:"<b>WhatsApp</b>'ı aç",h2:"<b>Menü → Bağlı Cihazlar</b>'a dokun",h3:"<b>Cihaz Bağla</b>'ya dokun",h4:"<b>'Numara ile bağla'</b>'ya dokun",h5:'Kodu tam olarak yaz',wt:'WhatsApp bekleniyor...',ws:'Session ID otomatik görünecek.',back:'Farklı numara',p3t:'OTURUM HAZIR',p3s:"Session ID'ni kopyala. Gizli tut.",copy:'Kopyala',d1:"<b>VORTE PRO</b>'yu Heroku veya Render'e dağıt",d3:"<code>OWNER_1</code>'i ayarla",d4:'Bota <code>.menu</code> gönder',newSess:'Yeni oturum'}
+};
+
+function setLang(l,btn){
+  lang=l;
+  document.querySelectorAll('.lb').forEach(function(b){b.classList.remove('on')});
+  if(btn) btn.classList.add('on');
+  var t=T[l]||T.en;
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var k=el.getAttribute('data-i18n');
+    if(t[k]!==undefined) el.innerHTML=t[k];
+  });
+  document.documentElement.setAttribute('dir',l==='ar'?'rtl':'ltr');
+}
+
+function filterC(q){
+  Array.from(document.getElementById('cc').options).forEach(function(o){
+    o.style.display=o.text.toLowerCase().includes(q.toLowerCase())?'':'none';
+  });
+}
+
+function goToStep(n){
+  [1,2,3].forEach(function(i){
+    document.getElementById('p'+i).classList.toggle('on',i===n);
+    var sn=document.getElementById('sn'+i),sc=document.getElementById('sc'+i),sl=document.getElementById('sl'+i);
+    if(i<n){sn.className='sn done';sc.className='sc done';sc.textContent='✓';if(sl)sl.classList.add('done');}
+    else if(i===n){sn.className='sn on';sc.className='sc on';sc.textContent=i;}
+    else{sn.className='sn';sc.className='sc';sc.textContent=i;if(sl)sl.classList.remove('done');}
+  });
+}
+
+function showErr(id,msg){var e=document.getElementById(id);e.innerHTML=msg;e.style.display='block';}
+function hideErr(id){document.getElementById(id).style.display='none';}
+
+function showToast(msg){
+  var t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},3000);
+}
+
+async function requestCode(){
+  var cc=document.getElementById('cc').value;
+  var num=document.getElementById('phone').value.replace(/\D/g,'');
+  if(!num||num.length<5){showErr('e1','Please enter a valid phone number.');return;}
+  hideErr('e1');
+
+  var btn=document.getElementById('genBtn');
+  var loader=document.getElementById('bload');
+  btn.disabled=true;
+  loader.classList.add('on');
+
+  try{
+    var res=await fetch('/api/request-code',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({phone:cc+num})
+    });
+    var data=await res.json();
+    if(!data.success){
+      showErr('e1',data.error||'Failed to generate code. Try again.');
+      return;
+    }
+    token=data.token;
+    currentCode=data.code;
+    renderCode(data.code);
+    goToStep(2);
+    startPoll();
+  }catch(e){
+    showErr('e1','Cannot connect to server. Please check your connection and try again.');
+  }finally{
+    btn.disabled=false;
+    loader.classList.remove('on');
+  }
+}
+
+function renderCode(code){
+  var chunks=code.split('-');
+  document.getElementById('chunks').innerHTML=chunks.map(function(c){return '<div class="chunk">'+c+'</div>';}).join('');
+  var secs=60;
+  var timerEl=document.getElementById('timerEl');
+  var timerTxt=document.getElementById('timerTxt');
+  if(timerInt) clearInterval(timerInt);
+  timerInt=setInterval(function(){
+    secs--;
+    timerTxt.textContent=secs>0?secs+'s':'Expired';
+    timerEl.className=secs<=15?'ctimer urg':'ctimer';
+    if(secs<=0) clearInterval(timerInt);
+  },1000);
+}
+
+async function copyCode(){
+  if(!currentCode) return;
+  await doCopy(currentCode);
+  var btn=document.getElementById('cpCode');
+  btn.classList.add('cp');btn.querySelector('span').textContent='Copied!';
+  setTimeout(function(){btn.classList.remove('cp');btn.querySelector('span').textContent=T[lang].copy||'Copy';},2000);
+  showToast('Code copied!');
+}
+
+function startPoll(){
+  if(pollInt) clearInterval(pollInt);
+  pollInt=setInterval(async function(){
+    if(!token) return;
+    try{
+      var res=await fetch('/api/session-status/'+token);
+      var data=await res.json();
+      if(!data.success){clearInterval(pollInt);showErr('e2',data.error||'Session error.');return;}
+      if(data.status==='ready'&&data.sessionId){
+        clearInterval(pollInt);
+        if(timerInt) clearInterval(timerInt);
+        sessionId=data.sessionId;
+        typeReveal(data.sessionId);
+        goToStep(3);
+      }
+    }catch(e){}
+  },2000);
+}
+
+function typeReveal(text){
+  var el=document.getElementById('sessTxt');
+  el.textContent='';var i=0;
+  var iv=setInterval(function(){el.textContent+=text[i++];if(i>=text.length)clearInterval(iv);},5);
+}
+
+async function copySession(){
+  if(!sessionId) return;
+  await doCopy(sessionId);
+  var btn=document.getElementById('cpSess');
+  btn.classList.add('cp');btn.querySelector('span').textContent='Copied!';
+  setTimeout(function(){btn.classList.remove('cp');btn.querySelector('span').textContent=T[lang].copy||'Copy';},2500);
+  showToast('Session ID copied!');
+}
+
+async function doCopy(text){
+  try{await navigator.clipboard.writeText(text);return;}catch(e){}
+  var ta=document.createElement('textarea');
+  ta.value=text;ta.style.cssText='position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  document.execCommand('copy');document.body.removeChild(ta);
+}
+
+function goBack(){
+  clearInterval(pollInt);clearInterval(timerInt);
+  token=null;currentCode=null;hideErr('e2');goToStep(1);
+}
+
+function resetAll(){
+  clearInterval(pollInt);clearInterval(timerInt);
+  token=null;sessionId=null;currentCode=null;
+  document.getElementById('phone').value='';
+  hideErr('e1');goToStep(1);
+}
+
+document.getElementById('phone').addEventListener('keydown',function(e){if(e.key==='Enter')requestCode();});
+document.getElementById('phone').addEventListener('input',function(e){e.target.value=e.target.value.replace(/\D/g,'');});
+</script>
+</body>
+</html>
