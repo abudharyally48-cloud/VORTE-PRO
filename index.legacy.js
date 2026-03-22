@@ -661,10 +661,10 @@ async function startWhatsAppBot() {
 
         if (command === "menu") {
           const os = require("os");
-          const menuImageUrl = "https://files.catbox.moe/y7vjf2.jpg";
+          const menuImageUrl = "https://files.catbox.moe/dy3s7k.jpg";
 
           const botName = "VORTE PRO";
-          const ownerName = "Your Name";
+          const ownerName = "𝕽𝟜𝕲𝕰";
           const prefix = ".";
           const version = "1.0.0";
           const mode = "Public";
@@ -792,7 +792,8 @@ async function startWhatsAppBot() {
 │➽ .broadcast
 ┗▣
 
-Type ${prefix} before each command!
+VORTE PRO YOUR POWERFUL WHATSAPP ASSISTANT 
+made with hate by 𝕽𝟜𝕲𝕰
 `;
 
           await sock.sendMessage(chat, {
