@@ -56,7 +56,7 @@ function setupServer() {
   });
 
   // Centralized Session Generator API
-  app.post('/api/pair', async (req, res) => {
+  app.post('/api/request-code', async (req, res) => {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ success: false, error: 'Phone number is required.' });
     
@@ -90,7 +90,7 @@ function setupServer() {
       const startSock = () => {
         const sock = makeWASocket({
           logger: pino({ level: 'silent' }),
-          browser: Browsers.ubuntu('Chrome'),
+          browser: ["Ubuntu", "Chrome", "20.0.04"],
           auth: {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino().child({ level: "silent" })),
@@ -140,12 +140,14 @@ function setupServer() {
                   isFinished = true;
                   
                   // Cleanup connection and temporary files
-                  try { sock.ws.close(); } catch(e) {}
+                  try { sock.end(); } catch(e) {}
                   
-                  setTimeout(() => {
+                   setTimeout(() => {
                     if (fs.existsSync(tempSessionFolder)) {
                        fs.rmSync(tempSessionFolder, { recursive: true, force: true });
                     }
+                    sessionMap.delete(token); // Final removal from memory
+                    console.log(`🧹 Full cleanup completed for +${token}`);
                   }, 60000); // Wait 60s for Baileys saveCreds internal debounce queue to drain completely
                 } else {
                   sessionMap.set(token, { status: 'error', error: 'Credentials file not found.' });

@@ -80,7 +80,7 @@ app.post('/api/request-code', async (req, res) => {
       version,
       logger: P({ level: 'silent' }),
       printQRInTerminal: false,
-      browser: Browsers.ubuntu('Chrome'),
+      browser: ["Ubuntu", "Chrome", "20.0.04"],
       auth: {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, P({ level: 'silent' })),
@@ -184,13 +184,13 @@ app.post('/api/request-code', async (req, res) => {
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     console.log(`📲 Requesting pairing code for +${cleanPhone}...`);
-    const pairingCode = await sock.requestPairingCode(cleanPhone);
-
-if (!pairingCode) throw new Error('No pairing code returned from WhatsApp');
-    // Delay after requesting to let WhatsApp process
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    console.log(`📲 Raw pairing code response:`, pairingCode);
+    let pairingCode;
+    try {
+      pairingCode = await sock.requestPairingCode(cleanPhone);
+    } catch (e) {
+      console.error(`❌ Baileys requestPairingCode failed:`, e.message);
+      throw new Error('WhatsApp rejected the pairing request. Try again later.');
+    }
 
     if (!pairingCode) throw new Error('No pairing code returned from WhatsApp');
 
@@ -271,7 +271,7 @@ function generateSessionId(tmpDir) {
   }
   const creds = fs.readFileSync(credsFile, 'utf8');
   const encoded = Buffer.from(creds).toString('base64');
-  return `VORTE_${encoded}`;
+  return `VORTE_PRO~${encoded}`;
 }
 
 // ===== START SERVER =====
