@@ -471,7 +471,35 @@ async function startWhatsAppBot() {
       const senderNum = jidToNumber(sender);
       const mentions = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
       const isGroupChat = chat.endsWith("@g.us");
+      
+sock.ev.on("messages.upsert", ({ messages }) => {
+  const m = messages[0];
+  if (!m.message) return;
 
+  // Save every message by its id
+  antiDeleteStore[m.key.id] = m;
+});    
+             sock.ev.on("messages.update", async (updates) => {
+  for (const update of updates) {
+    // Check if message was deleted
+    if (update.update.message === null) {
+      const deletedId = update.key.id;
+      const msg = antiDeleteStore[deletedId];
+      if (!msg) return;
+
+      const sender = msg.key.participant || msg.key.remoteJid;
+
+      // Only forward media
+      if (msg.message?.imageMessage || msg.message?.videoMessage || msg.message?.stickerMessage) {
+        await sock.sendMessage(sender, {
+          text: "👀 Someone deleted this media, here it is:"
+        });
+
+        await sock.sendMessage(sender, { forward: msg });
+      }
+    }
+  }
+});
       // Get message text
       const msgText =
         m.message?.conversation ||
@@ -661,7 +689,7 @@ async function startWhatsAppBot() {
 
         if (command === "menu") {
           const os = require("os");
-          const menuImageUrl = "https://files.catbox.moe/dy3s7k.jpg";
+          const menuImageUrl = "https://files.catbox.moe/jx34s9.jpg";
 
           const botName = "VORTE PRO";
           const ownerName = "𝕽𝟜𝕲𝕰";
@@ -678,11 +706,11 @@ async function startWhatsAppBot() {
           const minutes = Math.floor((uptime % 3600) / 60);
           const seconds = Math.floor(uptime % 60);
 
-          const plugins = 67;
+          const plugins = 81;
 
           const header = `
 ╔══════════════════════╗
-║        🤖 ${botName}        ║
+║        🤖 ${botName}     ║
 ╚══════════════════════╝
 
 ➤ Owner   : ${ownerName}
@@ -722,10 +750,18 @@ async function startWhatsAppBot() {
 
 ┏▣ ◈ BOT CONTROLS ◈
 │➽ .ping
+|➽ .ping2
+|➽ .ping3
 │➽ .menu
+|➽ .menu2
 │➽ .owner
 │➽ .setnamebot
 │➽ .setbio
+|➽ .system
+|➽ .status
+|➽ .runtime
+|➽ .restart
+|➽ .update
 ┗▣
 
 ┏▣ ◈ AUTOMATION ◈
@@ -775,6 +811,7 @@ async function startWhatsAppBot() {
 │➽ .dice
 │➽ .coin
 │➽ .guess
+|➽ .hack
 ┗▣
 
 ┏▣ ◈ TOOLS ◈
@@ -785,6 +822,11 @@ async function startWhatsAppBot() {
 │➽ .countchars
 │➽ .vv
 │➽ .toviewonce
+|➽ .timer
+|➽ .upper
+|➽ .lower
+|➽ .password 
+|➽ .pick
 ┗▣
 
 ┏▣ ◈ OWNER ONLY ◈
@@ -801,6 +843,166 @@ made with hate by 𝕽𝟜𝕲𝕰
             caption: header + menuBody
           });
           return;
+        }
+        if (command === "menu2") {
+  const os = require("os");
+
+  const menuVideoUrl = "https://files.catbox.moe/0q997k.mp4"; // 🔥 replace with your video
+
+  const botName = "VORTE PRO ⚡";
+  const ownerName = "𝕽𝟜𝕲𝕰";
+  const prefix = ".";
+  const version = "1.0.0";
+  const mode = "Public";
+
+  const speed = `${(Math.random() * 0.5 + 0.1).toFixed(3)}s`;
+  const usedRam = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+  const totalRam = (os.totalmem() / 1024 / 1024).toFixed(0);
+
+  const uptime = process.uptime();
+  const hours = Math.floor(uptime / 3600);
+  const minutes = Math.floor((uptime % 3600) / 60);
+  const seconds = Math.floor(uptime % 60);
+
+  const plugins = 81;
+
+  const header = `
+╔══════════════════════╗
+║     🎬 ${botName}        ║
+╚══════════════════════╝
+
+➤ Owner   : ${ownerName}
+➤ Prefix  : ${prefix}
+➤ Version : ${version}
+➤ Mode    : ${mode}
+➤ Plugins : ${plugins}
+➤ Speed   : ${speed}
+➤ Usage   : ${hours}h ${minutes}m ${seconds}s
+➤ Ram     : ${usedRam}MB / ${totalRam}MB
+`;
+
+  const menuBody = `
+┏▣ ◈ GROUP COMMANDS ◈
+│➽ .tagall
+│➽ .promote @user
+│➽ .demote @user
+│➽ .kick @user
+│➽ .leave
+│➽ .kickall
+│➽ .listadmins
+│➽ .tagadmins
+│➽ .welcome
+│➽ .goodbye
+│➽ .close
+│➽ .open
+│➽ .gclink
+│➽ .antilink
+│➽ .setgroupname
+│➽ .warn
+│➽ .userid
+│➽ .poll
+│➽ .tostatusgroup
+│➽ .hidetag
+│➽ .delppgroup
+┗▣
+
+┏▣ ◈ BOT CONTROLS ◈
+│➽ .ping
+|➽ .ping2
+|➽ .ping3
+│➽ .menu
+│➽ .menu2
+│➽ .owner
+│➽ .setnamebot
+│➽ .setbio
+|➽ .system
+|➽ .status
+|➽ .runtime
+|➽ .restart
+|➽ .update
+┗▣
+
+┏▣ ◈ AUTOMATION ◈
+│➽ .autotyping
+│➽ .autorecording
+│➽ .autostatusview
+│➽ .autoreacttostatus
+│➽ .autoreact
+┗▣
+
+┏▣ ◈ GAMES ◈
+│➽ .tictactoe @user
+│➽ .tttmove
+│➽ .hangmanstart
+│➽ .hangmanguess
+│➽ .quizstart
+│➽ .quizanswer
+┗▣
+
+┏▣ ◈ MEDIA & UTILS ◈
+│➽ .sticker
+│➽ .qr
+│➽ .song
+│➽ .yt
+│➽ .imdb
+┗▣
+
+┏▣ ◈ AI ◈
+│➽ .gpt
+┗▣
+
+┏▣ ◈ IMAGE AI ◈
+│➽ .1917style
+│➽ .advancedglow
+│➽ .cartoonstyle
+│➽ .luxurygold
+│➽ .matrix
+│➽ .sand
+│➽ .papercutstyle
+┗▣
+
+┏▣ ◈ FUN COMMANDS ◈
+│➽ .joke
+│➽ .quote
+│➽ .truth
+│➽ .dare
+│➽ .dice
+│➽ .coin
+│➽ .guess
+|➽ .hack
+┗▣
+
+┏▣ ◈ TOOLS ◈
+│➽ .math
+│➽ .echo
+│➽ .say
+│➽ .reverse
+│➽ .countchars
+│➽ .vv
+│➽ .toviewonce
+|➽ .timer
+|➽ .upper
+|➽ .lower
+|➽ .password 
+|➽ .pick
+┗▣
+
+┏▣ ◈ OWNER ONLY ◈
+│➽ .sudo
+│➽ .broadcast
+┗▣
+
+⚡ VORTE PRO VIDEO MENU ⚡
+made with hate by 𝕽𝟜𝕲𝕰 😈
+`;
+
+  await sock.sendMessage(chat, {
+    video: { url: menuVideoUrl },
+    caption: header + menuBody,
+    gifPlayback: true
+  });
+
+  return;
         }
 
         if (command === "owner") {
@@ -855,7 +1057,78 @@ made with hate by 𝕽𝟜𝕲𝕰
           }
           return;
         }
+        if (command === "status") {
+  const os = require("os");
+  const usedRam = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+  const totalRam = (os.totalmem() / 1024 / 1024).toFixed(0);
 
+  reply(`
+⚡ BOT STATUS
+➤ RAM Usage: ${usedRam}MB / ${totalRam}MB
+➤ Platform : ${os.platform()}
+➤ CPU      : ${os.cpus()[0].model}
+➤ Cores    : ${os.cpus().length}
+➤ Hostname : ${os.hostname()}
+`);
+        }
+if (command === "runtime") {
+  const uptime = process.uptime();
+  const hours = Math.floor(uptime / 3600);
+  const minutes = Math.floor((uptime % 3600) / 60);
+  const seconds = Math.floor(uptime % 60);
+
+  reply(`⏱️ Bot runtime: ${hours}h ${minutes}m ${seconds}s`);
+}
+        if (command === "system") {
+  const os = require("os");
+
+  reply(`
+💻 SYSTEM INFO
+➤ Platform : ${os.platform()}
+➤ CPU      : ${os.cpus()[0].model}
+➤ Cores    : ${os.cpus().length}
+➤ RAM      : ${(os.totalmem()/1024/1024).toFixed(0)} MB
+➤ Hostname : ${os.hostname()}
+`);
+        }
+        if (command === "ping3") {
+  const start = Date.now();
+  const msg = await reply("⚡ Testing speed...");
+  const end = Date.now();
+  await sock.sendMessage(chat, {
+    text: `🏓 Ping: ${end - start} ms`,
+    edit: msg.key
+  });
+        }
+        if (command === "restart") {
+  // Only allow owner
+  const ownerNumber = "YOUR_NUMBER@s.whatsapp.net";
+  if (m.sender !== ownerNumber) return reply("❌ Only owner can restart the bot!");
+
+  reply("♻️ Restarting bot...");
+
+  // Exit the process, PM2 / nodemon / heroku will auto-restart
+  process.exit(1);
+        }
+        
+        if (command === "update") {
+  const ownerNumber = "YOUR_NUMBER@s.whatsapp.net";
+  if (m.sender !== ownerNumber) return reply("❌ Only owner can update the bot!");
+
+  const exec = require("child_process").exec;
+
+  reply("⬇️ Pulling latest updates...");
+
+  exec("git pull", (err, stdout, stderr) => {
+    if (err) return reply(`❌ Update failed:\n${err}`);
+    if (stderr) return reply(`⚠️ Some issues:\n${stderr}`);
+
+    reply(`✅ Update complete:\n${stdout}\n\nRestarting bot...`);
+    
+    // Restart after update
+    process.exit(1);
+  });
+        }
         // Automation toggle commands
         if (command === "autotyping" || command === "autorecording" || command === "autostatusview" || command === "autoreact" || command === "autoreacttostatus" || command === "antilink") {
           if (!isGroupChat) return sock.sendMessage(chat, { text: "❌ Group only command." });
@@ -1028,6 +1301,16 @@ made with hate by 𝕽𝟜𝕲𝕰
           });
           return;
         }
+    if (command === "ping2") {
+  const start = Date.now();
+  const msg = await reply("Testing...");
+  const end = Date.now();
+
+  await sock.sendMessage(chat, {
+    text: `⚡ Speed: ${end - start} ms`,
+    edit: msg.key
+  });
+    }
 
         if (command === "vv") {
           if (!m.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
@@ -1071,6 +1354,67 @@ made with hate by 𝕽𝟜𝕲𝕰
             });
           }
 
+          if (command === "timer") {
+  const time = parseInt(text);
+  if (!time) return reply("Enter seconds");
+
+  reply(`⏳ Timer started for ${time}s`);
+
+  setTimeout(() => {
+    sock.sendMessage(chat, { text: "⏰ Time's up!" });
+  }, time * 1000);
+          }
+          if (command === "count") {
+  if (!text) return reply("Send text!");
+  reply(`🔢 Characters: ${text.length}`);
+          }
+          if (command === "upper") {
+  reply(text.toUpperCase());
+          }
+          
+if (command === "lower") {
+  reply(text.toLowerCase());
+}     
+          if (command === "password") {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#";
+  let pass = "";
+  for (let i = 0; i < 10; i++) {
+    pass += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  reply(`🔐 Password: ${pass}`);
+        }
+          if (command === "pick") {
+  const items = text.split(",");
+  if (items.length < 2) return reply("Example: .pick apple,banana");
+
+  const choice = items[Math.floor(Math.random() * items.length)];
+  reply(`🎯 I pick: ${choice.trim()}`);
+          }
+          
+        if (command === "hack") {
+  const steps = [
+    "💻 Initializing hack...",
+    "📡 Connecting to server...",
+    "🔍 Scanning target...",
+    "📂 Accessing files...",
+    "🔓 Bypassing security...",
+    "📤 Uploading virus...",
+    "💀 Hack complete!"
+  ];
+
+  let i = 0;
+  let msg = await sock.sendMessage(chat, { text: steps[0] });
+
+  let interval = setInterval(async () => {
+    i++;
+    if (i >= steps.length) return clearInterval(interval);
+
+    await sock.sendMessage(chat, {
+      text: steps[i],
+      edit: msg.key
+    });
+  }, 1000);
+        }
           if (quoted.videoMessage) {
             return sock.sendMessage(chat, {
               viewOnceMessage: { message: { videoMessage: quoted.videoMessage } },
