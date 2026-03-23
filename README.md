@@ -33,19 +33,34 @@ npm install
 ```
 
 ### 3. Configuration
-Copy the `.env.example` to `.env` and fill in your API keys and configuration:
+Copy the `.env.example` to `.env` and fill in your configuration:
 ```bash
 cp .env.example .env
 ```
+> [!TIP]
+> Paste your `SESSION_ID` in the `.env` file to skip the QR code scan on every restart.
 
-### 4. Running the Bot
+### 4. Session Management & Pairing
+There are two ways to link your WhatsApp account:
+
+#### A. Web Session Generator (Recommended for Servers)
+1. Start the bot: `npm start`.
+2. Open your browser to `http://localhost:3000` (or your hosted URL).
+3. Enter your phone number (including country code, e.g., `255796819436`).
+4. Enter the pairing code shown on the site into your WhatsApp (Linked Devices → Link with phone number).
+5. Once connected, the bot will send your **Session ID** directly to your WhatsApp.
+6. Copy this ID into your `.env` file as `SESSION_ID="YOUR_ID_HERE"`.
+
+#### B. Terminal QR Code (Quick Local Setup)
+If no `SESSION_ID` is provided in `.env`, the bot will automatically print a QR code in your terminal. Scan it using WhatsApp → Linked Devices → Link a Device.
+
+### 5. Running the Bot
 ```bash
-# Production mode
+# Start the bot
 npm start
-
-# Development mode (with nodemon)
-npm run dev
 ```
+> [!NOTE]
+> The bot features **Live Message Tracking**. All incoming messages will be logged directly to your terminal for real-time monitoring.
 
 ---
 

@@ -36,6 +36,14 @@ async function handleMessage(sock, upsert, getSettings, saveSettings) {
 
   const body = (msgText || "").trim();
 
+  // Log incoming message to console for tracking
+  if (body) {
+    const senderNum = sender.split('@')[0];
+    const chatNum = chat.split('@')[0];
+    const context = isGroupChat ? `[Group: ${chatNum}]` : '[Private]';
+    console.log(`💬  ${context} ${senderNum}: ${body}`);
+  }
+
   // Allow self-commands: ignore fromMe ONLY if it's not a command
   if (m.key?.fromMe && !body.startsWith(config.prefix)) return;
 

@@ -121,8 +121,15 @@ async function startBot(pairingState, handlers = {}) {
     }
 
     if (connection === "open") {
-      console.log(`✅ Connected successfully as ${sock.user.id.split(':')[0]}`);
+      const devicePhone = sock.user.id.split(':')[0];
+      console.log(`✅ Connected successfully as ${devicePhone}`);
       pairingState.latestQR = null;
+
+      // Send startup confirmation to the bot's own number
+      const jid = `${devicePhone}@s.whatsapp.net`;
+      sock.sendMessage(jid, { 
+        text: `🤖 *VORTE-PRO SYSTEM ONLINE*\n\n✅ Successfully securely connected.\n📡 Environment: ${process.env.SESSION_ID ? 'Render/Hosted (.env)' : 'Local Storage'}\n⚡ The bot is now actively monitoring events.`
+      }).catch(err => console.error("Failed to send startup message:", err));
     }
   });
 
