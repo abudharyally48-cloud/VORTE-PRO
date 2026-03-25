@@ -80,6 +80,18 @@ VORTE-PRO/
 └── index.js             # Root bootloader
 ```
 
+## 🚀 Deployment
+
+Choose your preferred platform to host VORTE-PRO 24/7:
+
+- **[Heroku](DEPLOY.md#heroku)**: Recommended for beginners.
+- **[Katabump](DEPLOY.md#katabump)**: Free and easy bot hosting for Node.js.
+- **[VPS (Ubuntu/Linux)](DEPLOY.md#vps)**: For advanced users and maximum control.
+
+See the [Detailed Deployment Guide](DEPLOY.md) for step-by-step instructions.
+
+---
+
 ## 📜 Commands
 
 The default prefix is `.`. 
