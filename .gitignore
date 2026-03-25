@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment & secrets — NEVER commit these
+/.env
+/config.js
+
+# Session data & Configuration — contains WhatsApp credentials & Group Settings
+session/
+tmp_session/
+tmp_sessions/
+storage/session/
+storage/groupSettings.json
+storage/groupSettings.json.bak
+creds.json
+*.json.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
