@@ -67,11 +67,42 @@ function isOwner(jid) {
   return owners.some(o => num.includes(o.replace(/[^0-9]/g, '')));
 }
 
+/**
+ * Check if a JID is an admin in a group
+ * @param {object} sock
+ * @param {string} chat
+ * @param {string} user
+ * @returns {Promise<boolean>}
+ */
+async function isAdmin(sock, chat, user) {
+  if (!isGroup(chat)) return false;
+  try {
+    const metadata = await sock.groupMetadata(chat);
+    const admins = metadata.participants.filter((p) => p.admin).map((p) => p.id);
+    return admins.includes(user);
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Check if the bot is an admin in a group
+ * @param {object} sock
+ * @param {string} chat
+ * @returns {Promise<boolean>}
+ */
+async function isBotAdmin(sock, chat) {
+  const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+  return await isAdmin(sock, chat, botJid);
+}
+
 module.exports = {
   isGroup,
   jidToNumber,
   formatTime,
   tttBoardToText,
   ensureDir,
-  isOwner
+  isOwner,
+  isAdmin,
+  isBotAdmin
 };

@@ -63,6 +63,65 @@ async function handleMessage(sock, upsert, getSettings, saveSettings) {
     return;
   }
 
+  // Anti-Link Moderation
+  if (groupSetting.antilink && !isOwner) {
+    const linkRegex = /(https?:\/\/[^\s]+)/i;
+    if (linkRegex.test(body)) {
+      const isAdmin = await helpers.isAdmin(sock, chat, sender);
+      if (!isAdmin) {
+        await sock.sendMessage(chat, { delete: m.key });
+        const warns = (groupSetting.warnings?.[sender] || 0) + 1;
+        
+        // Update warnings in settings
+        if (!settings[chat]) settings[chat] = {};
+        if (!settings[chat].warnings) settings[chat].warnings = {};
+        settings[chat].warnings[sender] = warns;
+        saveSettings(settings);
+
+        await sock.sendMessage(chat, {
+          text: `🚫 @${sender.split("@")[0]} links are not allowed!\n⚠️ Warning: ${warns}/3`,
+          mentions: [sender]
+        });
+
+        if (warns >= 3) {
+          const isBotAdmin = await helpers.isBotAdmin(sock, chat);
+          if (isBotAdmin) {
+            await sock.groupParticipantsUpdate(chat, [sender], "remove");
+            await sock.sendMessage(chat, {
+              text: `❌ @${sender.split("@")[0]} removed after 3 warnings.`,
+              mentions: [sender]
+            });
+            delete settings[chat].warnings[sender];
+            saveSettings(settings);
+          }
+        }
+        return;
+      }
+    }
+  }
+
+  // Automation: Auto Status View
+  if (groupSetting.autostatusview && chat.endsWith("@s.whatsapp.net")) {
+    try {
+      await sock.readMessages([m.key]);
+    } catch (e) {}
+  }
+
+  // Automation: Auto React
+  if (groupSetting.autoreact) {
+    const emojis = ["❤️","😂","🤔","😅","🙂","🥺","🤒","🥹","😞","💔","🤖","😊","😁","😭","😘","🥰","🥲","🤩","😬","😝","😜","😔","😌","😋","🤬","🙄","😒","😶‍囚","😕","🤮","🥵","⭐","💥","👥","🫂","👁️","🦿","🦾"];
+    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+    try {
+      await sock.sendMessage(chat, { react: { text: randomEmoji, key: m.key } });
+    } catch (e) {}
+  }
+
+  // Automation: Auto Recording (for group or private)
+  if (groupSetting.autorecording) {
+    setTimeout(() => sock.sendPresenceUpdate("recording", chat), 100);
+    setTimeout(() => sock.sendPresenceUpdate("paused", chat), 2000);
+  }
+
   // Handle Commands
   if (body.startsWith(config.prefix)) {
     // Cooldown
