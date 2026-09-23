@@ -9,7 +9,7 @@ class GameService {
   }
 
   setupCleanup() {
-    setInterval(() => {
+    const interval = setInterval(() => {
       const now = Date.now();
       const oneHour = 3600000;
 
@@ -31,6 +31,7 @@ class GameService {
         }
       });
     }, 300000); // Every 5 minutes
+    interval.unref(); // don't let this timer keep the process alive on its own
   }
 
   // Tic Tac Toe
