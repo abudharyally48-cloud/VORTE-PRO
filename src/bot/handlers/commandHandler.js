@@ -28,6 +28,10 @@ class CommandHandler {
     console.log(`✅ Loaded ${this.commands.size} commands (including aliases)`);
   }
 
+  getCommandCount() {
+    return this.commands.size;
+  }
+
   async handle(sock, m, body, getSettings, saveSettings) {
     if (!body.startsWith(config.prefix)) return;
 
