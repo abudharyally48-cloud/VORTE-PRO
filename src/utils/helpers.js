@@ -57,13 +57,8 @@ function ensureDir(dir) {
 function isOwner(jid) {
   if (!jid) return false;
   const num = jid.split('@')[0];
-  const owners = [
-    config.owner1,
-    config.owner2,
-    "255778271055", // Default owners for safety
-    "255787512297"  // Current connected number
-  ].filter(Boolean);
-  
+  const owners = [config.owner1, config.owner2, ...(config.sudo || [])].filter(Boolean);
+
   return owners.some(o => num.includes(o.replace(/[^0-9]/g, '')));
 }
 
