@@ -1,0 +1,62 @@
+{
+  "name": "VORTE PRO",
+  "description": "VORTE PRO WhatsApp Bot — deployable to Heroku and other Node.js hosting panels",
+  "repository": "https://github.com/YOUR_USERNAME/VORTE-PRO",
+  "keywords": ["whatsapp", "bot", "baileys", "node"],
+  "stack": "heroku-22",
+  "buildpacks": [
+    { "url": "heroku/nodejs" }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  },
+  "env": {
+    "BOT_NAME": {
+      "description": "The bot's display name",
+      "value": "VORTE PRO"
+    },
+    "PREFIX": {
+      "description": "Command prefix",
+      "value": "."
+    },
+    "OWNER_1": {
+      "description": "Primary owner's WhatsApp number, with country code, no + or spaces (e.g. 255700000000)",
+      "required": true
+    },
+    "OWNER_2": {
+      "description": "Secondary owner's WhatsApp number (optional)",
+      "required": false
+    },
+    "SESSION_ID": {
+      "description": "Paste your VORTE_PRO~ session ID here (generate it via the pairing site first)",
+      "required": true
+    },
+    "SESSION_FOLDER": {
+      "description": "Local session storage path (leave default unless you know you need to change it)",
+      "value": "./storage/session"
+    },
+    "OPENAI_API_KEY": {
+      "description": "OpenAI API key, for .gpt and image-style commands (optional)",
+      "required": false
+    },
+    "YOUTUBE_API_KEY": {
+      "description": "YouTube Data API key, for .yt/.song (optional)",
+      "required": false
+    },
+    "OMDB_API_KEY": {
+      "description": "OMDb API key, for .imdb (optional)",
+      "required": false
+    },
+    "RAPIDAPI_KEY": {
+      "description": "RapidAPI key, for .randommovie/.randomtv and other RapidAPI-backed commands (optional)",
+      "required": false
+    },
+    "PORT": {
+      "description": "Port for the built-in web server (Heroku sets this automatically)",
+      "value": "3000"
+    }
+  }
+}
