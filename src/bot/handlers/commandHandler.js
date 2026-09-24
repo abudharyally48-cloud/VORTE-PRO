@@ -41,7 +41,14 @@ class CommandHandler {
 
     if (command) {
       try {
-        await command.execute(sock, m, args, getSettings, saveSettings);
+        await command.execute(
+  sock,
+  m,
+  args,
+  getSettings,
+  saveSettings,
+  this.getCommandCount()
+);
       } catch (error) {
         console.error(`❌ Error executing command ${commandName}:`, error);
         await sock.sendMessage(m.key.remoteJid, { text: '❌ An error occurred while executing this command.' });
