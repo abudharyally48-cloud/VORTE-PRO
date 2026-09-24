@@ -5,6 +5,8 @@ module.exports = {
 
   settingsPath: path.join(__dirname, '../../storage/settings.json'),
 
+  sessionFolder: path.join(__dirname, '../../storage/session'),
+
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
   IMDB_API_KEY: process.env.IMDB_API_KEY || '',
   YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || '',
