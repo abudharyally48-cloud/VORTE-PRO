@@ -2,7 +2,6 @@
 const os = require("os");
 const fs = require("fs");
 const config = require("../config/config");
-const commandHandler = require("../bot/handlers/commandHandler");
 
 // Defaults so .setmenu2/.setmenu3 work out of the box, even before .setmenudisplay
 // or a custom .setmenu2/.setmenu3 <url> is run live on the bot.
@@ -13,7 +12,7 @@ module.exports = {
   name: 'menu',
   aliases: ['help'],
   description: 'Show bot menu',
-  async execute(sock, m, args, getSettings) {
+  async execute(sock, m, args, getSettings, saveSettings, commandCount) { 
     const chat = m.key.remoteJid;
 
     let menuSettings = {};
@@ -39,7 +38,7 @@ module.exports = {
     const minutes = Math.floor((uptime % 3600) / 60);
     const seconds = Math.floor(uptime % 60);
 
-    const plugins = commandHandler.getCommandCount();
+    const plugins = commandCount || 0;
 
     const header = `
 ╔══════════════════════╗
