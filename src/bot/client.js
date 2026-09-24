@@ -9,6 +9,7 @@ const {
 const pino = require("pino");
 const fs = require("fs");
 const path = require("path");
+const qrcode = require("qrcode-terminal");
 const config = require("../config/config");
 const helpers = require("../utils/helpers");
 
@@ -77,7 +78,6 @@ async function startBot(pairingState, handlers = {}) {
   const sock = makeWASocket({
     logger: pino({ level: "silent" }),
     browser: ["VORTE-PRO", "Chrome", "1.0.0"],
-    printQRInTerminal: shouldPrintQR,
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino().child({ level: "silent" })),
@@ -104,10 +104,15 @@ async function startBot(pairingState, handlers = {}) {
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
 
-    if (qr) {
-      pairingState.latestQR = qr;
-      console.log(`📷 QR updated - visit /qr to scan`);
-    }
+  if (qr) {
+  pairingState.latestQR = qr;
+
+  if (!process.env.SESSION_ID) {
+    console.log('\n📱 SCAN THIS QR CODE WITH WHATSAPP:\n');
+    qrcode.generate(qr, { small: true });
+    console.log('\n📷 QR code generated. Waiting for WhatsApp connection...\n');
+  }
+}
 
     if (connection === "close") {
       pairingState.sock = null;
