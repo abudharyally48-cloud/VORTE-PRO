@@ -7,12 +7,20 @@ const setupServer = require('./server/server');
 const { startBot } = require('./bot/client');
 const { handleMessage } = require('./bot/events/messageHandler');
 const { handleGroupUpdate } = require('./bot/events/groupHandler');
+const { handleMessageUpdate } = require('./bot/events/editHandler');
+const { handleCall } = require('./bot/events/callHandler');
 
 async function main() {
   console.log('🚀 Starting VORTE PRO WhatsApp Bot (Modular Implementation)...');
 
   // 1. Ensure storage exists
   helpers.ensureDir(path.dirname(config.settingsPath));
+  // One-time migration: older versions stored settings in groupSettings.json.
+  const legacySettingsPath = path.join(path.dirname(config.settingsPath), 'groupSettings.json');
+  if (!fs.existsSync(config.settingsPath) && fs.existsSync(legacySettingsPath)) {
+    fs.copyFileSync(legacySettingsPath, config.settingsPath); // copy, not move: keeps a backup
+    console.log('📦 Migrated legacy groupSettings.json -> settings.json');
+  }
   if (!fs.existsSync(config.settingsPath)) {
     fs.writeFileSync(config.settingsPath, JSON.stringify({}, null, 2));
   }
@@ -31,7 +39,9 @@ async function main() {
   } else {
     const sock = await startBot(pairingState, {
       onMessage: (sock, upsert) => handleMessage(sock, upsert, getSettings, saveSettings),
-      onGroupUpdate: (sock, update) => handleGroupUpdate(sock, update, getSettings)
+      onGroupUpdate: (sock, update) => handleGroupUpdate(sock, update, getSettings),
+      onMessageUpdate: (sock, updates) => handleMessageUpdate(sock, updates, getSettings),
+      onCall: (sock, calls) => handleCall(sock, calls, getSettings)
     });
   
     console.log('✅ Bot initialization complete. Monitoring events...');
