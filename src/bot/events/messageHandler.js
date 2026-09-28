@@ -4,6 +4,7 @@ const helpers = require("../../utils/helpers");
 const commandHandler = require("../handlers/commandHandler");
 const openai = require("../../services/openai");
 const chatStore = require("../../utils/chatStore");
+const messageCache = require("../../utils/messageCache");
 
 // In-memory clones of what was in index.js
 const lastCommand = {};
@@ -69,8 +70,30 @@ async function handleMessage(sock, upsert, getSettings, saveSettings) {
   const isOwner = helpers.isOwner(sender) || m.key?.fromMe;
   if (globalSetting.mode === "self" && !isOwner) return;
 
+  // Enforcement: mute — auto-delete messages from currently-muted users
+  if (isGroupChat && groupSetting.mutedUsers?.[helpers.normalizeJid(sender)] > Date.now() && !isOwner) {
+    try { await sock.sendMessage(chat, { delete: m.key }); } catch (e) {}
+    return;
+  }
+
+  // Enforcement: anti-bot — a flagged bot number speaking in a group gets removed (if we're admin)
+  if (isGroupChat && groupSetting.antibot && !isOwner && (groupSetting.knownBots || []).includes(helpers.normalizeJid(sender))) {
+    if (await helpers.isBotAdmin(sock, chat)) {
+      try {
+        await sock.sendMessage(chat, { delete: m.key });
+        await sock.groupParticipantsUpdate(chat, [sender], "remove");
+      } catch (e) { console.error('❌ antibot removal failed:', e.message); }
+    }
+    return;
+  }
+
+  // Cache this message's content so antiedit/antidelete can show what changed
+  if (m.key.id) {
+    messageCache.store(m.key.id, { chat, sender, text: helpers.getBody(m) });
+  }
+
   // Enforcement: ignore anyone on the blacklist entirely
-  if (!isOwner && (globalSetting.blacklist || []).includes(sender.split("@")[0])) return;
+  if (!isOwner && (globalSetting.blacklist || []).includes(helpers.normalizeJid(sender))) return;
 
   // Get message text
   const msgText =
@@ -91,10 +114,20 @@ async function handleMessage(sock, upsert, getSettings, saveSettings) {
   }
 
   // Allow self-commands: ignore fromMe ONLY if it's not a command
-  if (m.key?.fromMe && !body.startsWith(config.prefix)) return;
+  if (m.key?.fromMe && !helpers.matchPrefix(body, globalSetting.customPrefix ? [globalSetting.customPrefix] : [])) return;
 
-  // Presence updates
-  if (isGroupChat && groupSetting.autotyping) {
+  // Online: keep presence set to available while enabled
+  if (globalSetting.online) {
+    try { await sock.sendPresenceUpdate("available"); } catch (e) {}
+  }
+
+  // Auto-read: mark every incoming message in this chat as read
+  if (groupSetting.autoread) {
+    try { await sock.readMessages([m.key]); } catch (e) {}
+  }
+
+  // Presence updates (works in both groups and private chats — not restricted to groups)
+  if (groupSetting.autotyping) {
     setTimeout(() => sock.sendPresenceUpdate("composing", chat), 100);
     setTimeout(() => sock.sendPresenceUpdate("paused", chat), 2000);
   }
@@ -113,9 +146,21 @@ async function handleMessage(sock, upsert, getSettings, saveSettings) {
   if (groupSetting.antilink && !isOwner) {
     const linkRegex = /(https?:\/\/[^\s]+)/i;
     if (linkRegex.test(body)) {
-      const isAdmin = await helpers.isAdmin(sock, chat, sender);
-      if (!isAdmin) {
-        await sock.sendMessage(chat, { delete: m.key });
+      const isAdminUser = await helpers.isAdmin(sock, chat, sender);
+      if (!isAdminUser) {
+        const botCanModerate = await helpers.isBotAdmin(sock, chat);
+        if (!botCanModerate) {
+          // Spec requirement: never attempt moderation without the right
+          // permissions, and never crash — just skip silently this time.
+          return;
+        }
+
+        try {
+          await sock.sendMessage(chat, { delete: m.key });
+        } catch (e) {
+          console.error('❌ antilink: failed to delete message:', e.message);
+        }
+
         const warns = (groupSetting.warnings?.[sender] || 0) + 1;
         
         // Update warnings in settings
@@ -196,16 +241,34 @@ async function handleMessage(sock, upsert, getSettings, saveSettings) {
     }
   }
 
-  // Automation: Auto Status View
-  if (groupSetting.autostatusview && chat.endsWith("@s.whatsapp.net")) {
-    try {
-      await sock.readMessages([m.key]);
-    } catch (e) {}
+  // Real WhatsApp Status handling (status@broadcast) — global/owner scope, not per-group.
+  // Previously this block checked chat.endsWith("@s.whatsapp.net"), which matches
+  // ordinary private DMs, not actual status updates — a real bug (spec explicitly
+  // warns against "pretending normal message events are status events").
+  if (chat === "status@broadcast") {
+    if (globalSetting.autostatusview) {
+      try {
+        await sock.readMessages([m.key]);
+      } catch (e) {
+        console.error('❌ autostatusview error:', e.message);
+      }
+    }
+    if (globalSetting.autoreacttostatus) {
+      try {
+        const statusEmojis = (globalSetting.statusReactEmojis && globalSetting.statusReactEmojis.length) ? globalSetting.statusReactEmojis : ["❤️", "🔥", "😂", "👍", "😮"];
+        const emoji = statusEmojis[Math.floor(Math.random() * statusEmojis.length)];
+        await sock.sendMessage("status@broadcast", { react: { text: emoji, key: m.key } }, { statusJidList: [m.key.participant, sender].filter(Boolean) });
+      } catch (e) {
+        console.error('❌ autoreacttostatus error:', e.message);
+      }
+    }
+    return; // a status update is never a command or a chat message to process further
   }
 
   // Automation: Auto React
   if (groupSetting.autoreact) {
-    const emojis = ["❤️","😂","🤔","😅","🙂","🥺","🤒","🥹","😞","💔","🤖","😊","😁","😭","😘","🥰","🥲","🤩","😬","😝","😜","😔","😌","😋","🤬","🙄","😒","😶‍囚","😕","🤮","🥵","⭐","💥","👥","🫂","👁️","🦿","🦾"];
+    const defaultEmojis = ["❤️","😂","🤔","😅","🙂","🥺","🥹","😞","💔","🤖","😊","😁","😭","😘","🥰","🥲","🤩","😬","😝","😜","😔","😌","😋","🙄","😒","😕","⭐","💥","🫂","👁️","🦾"];
+    const emojis = (groupSetting.reactEmojis && groupSetting.reactEmojis.length) ? groupSetting.reactEmojis : defaultEmojis;
     const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
     try {
       await sock.sendMessage(chat, { react: { text: randomEmoji, key: m.key } });
@@ -219,7 +282,7 @@ async function handleMessage(sock, upsert, getSettings, saveSettings) {
   }
 
   // Handle Commands
-  if (body.startsWith(config.prefix)) {
+  if (helpers.matchPrefix(body, globalSetting.customPrefix ? [globalSetting.customPrefix] : [])) {
     // Cooldown
     const now = Date.now();
     const cooldownKey = `${chat}_${sender}`;
