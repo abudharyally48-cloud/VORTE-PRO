@@ -12,6 +12,24 @@ However, the **menu picture/video** set via `.setmenudisplay` is saved locally t
 
 ---
 
+## 🔐 Authentication (two supported methods)
+
+VORTE PRO is self-hosted: **each installation owns its own WhatsApp session**, stored locally in `storage/session`. Nothing is sent to a central server.
+
+1. **SESSION_ID (recommended for hosted panels):** open the official VORTE PRO Session ID Generator website, pair your number with the pairing code, copy the `VORTE_PRO~...` value it gives you, and set it as the `SESSION_ID` environment variable. The bot loads it and connects — no QR needed. The bot never generates Session IDs itself.
+2. **Terminal QR:** leave `SESSION_ID` empty. On first start a QR code is printed in the console; scan it in WhatsApp → Linked Devices. Credentials are then saved locally and the bot reconnects automatically. (If WhatsApp logs the session out, delete `storage/session` and restart to pair again.)
+
+### Security switches (both default to OFF)
+| Variable | Effect |
+|---|---|
+| `ENABLE_EVAL=true` | Enables the owner-only `.sudo`/`.eval` code-execution command. It can read your API keys and session — only enable it if you understand the risk. |
+| `ENABLE_QR_PAGE=true` | Serves the login QR at `/qr` over HTTP. A browser-visible login QR is effectively a credential; prefer the terminal QR. |
+
+### Pairing-site deployment
+`SESSION_GENERATOR_ONLY=true` (as set in `render.yaml`) turns a deployment into the Session ID Generator website only. **Never set it on a normal bot deployment.**
+
+---
+
 ## 🐳 Docker-based panels (Pterodactyl, Katabump, Railway, generic VPS panels) <a name="docker"></a>
 
 A `Dockerfile` is included. Any panel that supports "deploy from Dockerfile" or "Docker image" will work:
