@@ -253,6 +253,8 @@ module.exports = {
 
 Type ${prefix} before each command!
 
+CREATED BY SIRAH TECH
+
 📢 ${config.channel.name}: ${config.channel.url}
 `;
 
