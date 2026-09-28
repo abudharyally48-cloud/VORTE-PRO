@@ -77,7 +77,6 @@ async function startBot(pairingState, handlers = {}) {
   const sock = makeWASocket({
     logger: pino({ level: "silent" }),
     browser: ["VORTE-PRO", "Chrome", "1.0.0"],
-    printQRInTerminal: shouldPrintQR,
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino().child({ level: "silent" })),
@@ -100,13 +99,27 @@ async function startBot(pairingState, handlers = {}) {
     sock.ev.on("group-participants.update", (update) => handlers.onGroupUpdate(sock, update));
   }
 
+  if (handlers.onMessageUpdate) {
+    sock.ev.on("messages.update", (updates) => handlers.onMessageUpdate(sock, updates));
+  }
+
+  if (handlers.onCall) {
+    sock.ev.on("call", (calls) => handlers.onCall(sock, calls));
+  }
+
   // Connection handling
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
       pairingState.latestQR = qr;
-      console.log(`📷 QR updated - visit /qr to scan`);
+      // Render the QR in the terminal (Baileys 7 no longer does this automatically).
+      require('qrcode').toString(qr, { type: 'terminal', small: true }, (err, art) => {
+        if (err) return console.error('❌ Could not render QR in terminal:', err.message);
+        console.log('\n📷 Scan this QR with WhatsApp → Linked Devices → Link a Device:\n');
+        console.log(art);
+      });
+      if (process.env.ENABLE_QR_PAGE === 'true') console.log('🌐 (QR page is also enabled at /qr)');
     }
 
     if (connection === "close") {
@@ -115,6 +128,9 @@ async function startBot(pairingState, handlers = {}) {
       const shouldReconnect = code !== DisconnectReason.loggedOut;
       console.log(`🔌 Connection closed (Code: ${code}). Reconnecting: ${shouldReconnect}`);
 
+      if (!shouldReconnect) {
+        console.log('🔑 This session was logged out from WhatsApp. Delete the storage/session folder (or supply a fresh SESSION_ID) and restart to pair again.');
+      }
       if (shouldReconnect) {
         setTimeout(() => startBot(pairingState, handlers), 5000);
       }
