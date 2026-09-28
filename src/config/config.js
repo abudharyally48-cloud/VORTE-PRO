@@ -9,7 +9,8 @@ const ownerDigits = ownerRaw.map((n) => n.replace(/[^0-9]/g, ''));
 module.exports = {
   // Bot Settings
   botName: process.env.BOT_NAME || "VORTE PRO",
-  prefix: process.env.PREFIX || ".",
+  prefix: process.env.PREFIX || ".",       // default/display prefix
+  prefixes: [...new Set([process.env.PREFIX || ".", ".", "!", "?", "$", "%", "&", "*"])], // every prefix users may type
 
   // Server Settings
   port: process.env.PORT || 20202,
@@ -20,15 +21,40 @@ module.exports = {
   owner2: ownerDigits[1] || null,
   sudo: ownerDigits,
 
+  // WhatsApp Channel — see CHANNEL INTEGRATION LIMITATION note: Baileys cannot
+  // attribute normal chat replies to a channel (no such protocol capability).
+  // This is just a centralized link/name so commands can promote it honestly.
+  channel: {
+    name: "VORTE PRO WhatsApp Channel",
+    url: "https://whatsapp.com/channel/0029VbBqa4HHbFVBar2vwO3H"
+  },
+
   // Session & Storage (resolved relative to this file, not the process CWD)
-  settingsPath: path.join(__dirname, '../../storage/groupSettings.json'),
-  sessionFolder: path.join(__dirname, '../../storage/session'),
+  settingsPath: path.join(__dirname, '../../storage/settings.json'),
+  sessionFolder: process.env.SESSION_FOLDER ? path.resolve(process.env.SESSION_FOLDER) : path.join(__dirname, '../../storage/session'),
 
   // API Keys
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   imdbApiKey: process.env.OMDB_API_KEY || process.env.IMDB_API_KEY || "",
+  tmdbApiKey: process.env.TMDB_API_KEY || "",
+  tmdbRegion: process.env.TMDB_REGION || "US", // used for "where to watch" results
   rapidApiKey: process.env.RAPIDAPI_KEY || "",
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
+  anthropicModel: process.env.ANTHROPIC_MODEL || "",
+  deepseekApiKey: process.env.DEEPSEEK_API_KEY || "",
+  deepseekModel: process.env.DEEPSEEK_MODEL || "",
+  openaiModel: process.env.OPENAI_MODEL || "",
+
+  // TikTok — official developer credentials only (see services/providers.js
+  // for why arbitrary public-video downloading isn't available this way)
+  tiktokClientKey: process.env.TIKTOK_CLIENT_KEY || "",
+  tiktokClientSecret: process.env.TIKTOK_CLIENT_SECRET || "",
+
+  // Instagram / Meta — official Graph API credentials
+  metaAppId: process.env.META_APP_ID || "",
+  metaAppSecret: process.env.META_APP_SECRET || "",
+  instagramAccessToken: process.env.INSTAGRAM_ACCESS_TOKEN || "",
 
   // Helper to check if a service is enabled (has API key)
   isServiceEnabled: (key) => !!key && key.trim().length > 0,
