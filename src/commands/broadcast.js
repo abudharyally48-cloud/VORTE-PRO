@@ -1,11 +1,11 @@
 // src/commands/broadcast.js
 const helpers = require("../utils/helpers");
+const chatStore = require("../utils/chatStore");
 
 module.exports = {
   name: "broadcast",
-  aliases: ["bc"],
-  description: "Send a message to all chats (Owner only)",
-  async execute(sock, m, args) {
+  description: "Broadcast a message to every known chat (owner only)",
+  async execute(sock, m, args, getSettings) {
     const chat = m.key.remoteJid;
     const sender = m.key.participant || m.key.remoteJid;
 
@@ -14,18 +14,20 @@ module.exports = {
     const message = args.join(" ");
     if (!message) return sock.sendMessage(chat, { text: "Usage: .broadcast <message>" });
 
+    const settings = getSettings?.() || {};
+    const safemode = !!settings.global?.safemode;
+    const delayMs = safemode ? 2500 : 500;
+
     try {
-      await sock.sendMessage(chat, { text: "📢 Starting broadcast to all chats..." });
+      await sock.sendMessage(chat, { text: `📢 Starting broadcast to all chats...${safemode ? " (safemode: slower pacing)" : ""}` });
 
       let success = 0;
       let failed = 0;
-      
-      // In a real bot, you'd get chats from a database or store
-      // Here we'll try to get them from the socket if available
-      const chats = Object.keys(sock.store?.chats || {}).slice(0, 100); 
+
+      const chats = chatStore.getKnownChats().slice(0, 200);
 
       if (chats.length === 0) {
-        return sock.sendMessage(chat, { text: "ℹ️ No chats found in memory to broadcast to." });
+        return sock.sendMessage(chat, { text: "ℹ️ No known chats yet — the bot only broadcasts to chats it has already seen a message in/from." });
       }
 
       for (const c of chats) {
@@ -33,17 +35,17 @@ module.exports = {
           try {
             await sock.sendMessage(c, { text: `📢 *Broadcast from VORTE PRO*\n\n${message}` });
             success++;
-            await new Promise(resolve => setTimeout(resolve, 500)); // Delay to avoid spam filters
+            await new Promise(resolve => setTimeout(resolve, delayMs)); // Delay to avoid spam filters
           } catch (e) {
             failed++;
           }
         }
       }
 
-      await sock.sendMessage(chat, { text: `✅ Broadcast completed!\n• Sent: ${success}\n• Failed: ${failed}` });
+      await sock.sendMessage(chat, { text: `✅ Broadcast complete.\nSent: ${success}\nFailed: ${failed}` });
     } catch (err) {
-      console.error(err);
-      await sock.sendMessage(chat, { text: "❌ Failed to complete broadcast." });
+      console.error("❌ Broadcast error:", err.message);
+      await sock.sendMessage(chat, { text: "❌ Broadcast failed." });
     }
-  },
+  }
 };

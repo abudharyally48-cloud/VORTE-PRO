@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: 'gclink',
+  aliases: ["link"],
   description: 'Get group invite link',
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

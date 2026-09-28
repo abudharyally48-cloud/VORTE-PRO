@@ -8,9 +8,13 @@ module.exports = {
   description: "Play a quick quiz",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
-    const body = args.join(" ");
+    const body = helpers.getBody(m);
+    const commandUsed = body.slice(1).split(/\s+/)[0].toLowerCase();
+    const answerText = args.join(" ");
 
-    if (body === "start" || m.body.toLowerCase().startsWith(".quizstart")) {
+    const isStart = commandUsed === "quizstart" || (commandUsed === "quiz" && args[0]?.toLowerCase() === "start");
+
+    if (isStart) {
       if (gameService.getQuiz(chat)) {
         return sock.sendMessage(chat, { text: "❌ A quiz is already active in this chat!" });
       }
@@ -25,26 +29,27 @@ module.exports = {
       const quiz = quizzes[Math.floor(Math.random() * quizzes.length)];
       gameService.setQuiz(chat, { ...quiz, active: true, createdAt: Date.now() });
 
-      await sock.sendMessage(chat, { 
-        text: `🧠 *Quiz Started!*\n\nQuestion: ${quiz.q}\n\nChoices: ${quiz.choices.join(", ")}\n\nAnswer with: .quizanswer <answer>` 
+      await sock.sendMessage(chat, {
+        text: `🧠 *Quiz Started!*\n\nQuestion: ${quiz.q}\n\nChoices: ${quiz.choices.join(", ")}\n\nAnswer with: quizanswer <answer>`
       });
       return;
     }
 
-    if (body || m.body.toLowerCase().startsWith(".quizanswer")) {
-      const quiz = gameService.getQuiz(chat);
-      if (!quiz || !quiz.active) return sock.sendMessage(chat, { text: "No active quiz. Start with .quizstart" });
+    // Otherwise: treat as an answer attempt (.quizanswer <x>, or .quiz <x>)
+    const quiz = gameService.getQuiz(chat);
+    if (!quiz || !quiz.active) return sock.sendMessage(chat, { text: "No active quiz. Start with quizstart" });
 
-      const userAnswer = (m.body.toLowerCase().startsWith(".quizanswer") ? args.join(" ") : body).trim().toLowerCase();
-      const correctAnswer = quiz.answer.toLowerCase();
+    if (!answerText) return sock.sendMessage(chat, { text: "Usage: quizanswer <your answer>" });
 
-      if (userAnswer === correctAnswer) {
-        await sock.sendMessage(chat, { text: `✅ *Correct!* @${helpers.jidToNumber(m.key.participant || m.key.remoteJid)} got it right! The answer is ${quiz.answer}`, mentions: [m.key.participant || m.key.remoteJid] });
-      } else {
-        await sock.sendMessage(chat, { text: `❌ *Wrong!* The correct answer is ${quiz.answer}` });
-      }
+    const userAnswer = answerText.trim().toLowerCase();
+    const correctAnswer = quiz.answer.toLowerCase();
 
-      gameService.deleteQuiz(chat);
+    if (userAnswer === correctAnswer) {
+      await sock.sendMessage(chat, { text: `✅ *Correct!* @${helpers.jidToNumber(m.key.participant || m.key.remoteJid)} got it right! The answer is ${quiz.answer}`, mentions: [m.key.participant || m.key.remoteJid] });
+    } else {
+      await sock.sendMessage(chat, { text: `❌ *Wrong!* The correct answer is ${quiz.answer}` });
     }
+
+    gameService.deleteQuiz(chat);
   },
 };

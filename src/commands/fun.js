@@ -9,7 +9,7 @@ module.exports = {
   description: "Fun and entertainment commands",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
-    const body = m.body || "";
+    const body = helpers.getBody(m);
     const prefix = body.charAt(0);
     const commandUsed = body.slice(1).split(/\s+/)[0].toLowerCase();
 
@@ -86,6 +86,7 @@ module.exports = {
           if (i >= steps.length) return clearInterval(interval);
           await sock.sendMessage(chat, { text: steps[i], edit: msg.key });
         }, 1000);
+        interval.unref();
         break;
     }
   },

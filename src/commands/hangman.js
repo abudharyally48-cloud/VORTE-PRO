@@ -8,7 +8,7 @@ module.exports = {
   description: "Play Hangman",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
-    const cmd = m.body.slice(1).split(/\s+/)[0].toLowerCase(); // Get the actual command used
+    const cmd = helpers.getBody(m).slice(1).split(/\s+/)[0].toLowerCase(); // Get the actual command used
     
     if (cmd === "hangmanstart" || (cmd === "hangman" && args[0] === "start")) {
       if (gameService.getHangman(chat)) {

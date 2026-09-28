@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "setgroupname",
+  aliases: ["updategname"],
   description: "Change the group name",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

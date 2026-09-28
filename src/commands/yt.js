@@ -4,7 +4,7 @@ const config = require("../config/config");
 
 module.exports = {
   name: 'yt',
-  aliases: ['youtube', 'search'],
+  aliases: ['youtube'],
   description: 'Search YouTube videos',
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

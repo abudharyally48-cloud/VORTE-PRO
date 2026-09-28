@@ -9,7 +9,14 @@ module.exports = {
     const chat = m.key.remoteJid;
     const sender = m.key.participant || m.key.remoteJid;
 
-    if (!helpers.isOwner(sender)) return sock.sendMessage(chat, { text: "❌ Owner only command." });
+    // SECURITY: this runs arbitrary code on the host (it can read env vars/API keys,
+    // creds.json, run shell commands). It is therefore (1) restricted to the TRUE
+    // owner — sudo-list users can't use it — and (2) disabled unless the host
+    // explicitly opts in with ENABLE_EVAL=true.
+    if (!helpers.isTrueOwner(sender)) return sock.sendMessage(chat, { text: "❌ Owner only command." });
+    if (process.env.ENABLE_EVAL !== "true") {
+      return sock.sendMessage(chat, { text: "🔒 The code-execution command is disabled. Set ENABLE_EVAL=true in the host environment to enable it (security risk — only do this if you understand it)." });
+    }
 
     const code = args.join(" ");
     if (!code) return sock.sendMessage(chat, { text: "Usage: .sudo <javascript code>" });

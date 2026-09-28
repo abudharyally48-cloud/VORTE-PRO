@@ -3,7 +3,7 @@ const youtube = require("../services/youtube");
 
 module.exports = {
   name: "song",
-  aliases: ["yt", "music"],
+  aliases: ["music"],
   description: "Search for a song on YouTube",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

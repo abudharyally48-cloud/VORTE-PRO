@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "setbio",
+  aliases: ["updatebio","description"],
   description: "Update the bot profile bio (Owner only)",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
