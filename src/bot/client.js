@@ -114,14 +114,11 @@ async function startBot(pairingState, handlers = {}) {
     if (qr) {
       pairingState.latestQR = qr;
       // Render the QR in the terminal (Baileys 7 no longer does this automatically).
-      require('qrcode').toString(qr, { type: 'terminal', small: true }, (err, art) => {
-        if (err) return console.error('❌ Could not render QR in terminal:', err.message);
-        console.log('\n📷 Scan this QR with WhatsApp → Linked Devices → Link a Device:\n');
-        console.log(art);
-      });
-      if (process.env.ENABLE_QR_PAGE === 'true') console.log('🌐 (QR page is also enabled at /qr)');
-    }
+     const qrcode = require('qrcode-terminal');
 
+console.log('\n📷 Scan this QR with WhatsApp → Linked Devices → Link a Device:\n');
+qrcode.generate(qr, { small: true });
+      
     if (connection === "close") {
       pairingState.sock = null;
       const code = lastDisconnect?.error?.output?.statusCode;
