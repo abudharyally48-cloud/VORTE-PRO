@@ -2,10 +2,17 @@
   "name": "VORTE PRO",
   "description": "VORTE PRO WhatsApp Bot — deployable to Heroku and other Node.js hosting panels",
   "repository": "https://github.com/YOUR_USERNAME/VORTE-PRO",
-  "keywords": ["whatsapp", "bot", "baileys", "node"],
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys",
+    "node"
+  ],
   "stack": "heroku-22",
   "buildpacks": [
-    { "url": "heroku/nodejs" }
+    {
+      "url": "heroku/nodejs"
+    }
   ],
   "formation": {
     "web": {
@@ -57,6 +64,26 @@
     "PORT": {
       "description": "Port for the built-in web server (Heroku sets this automatically)",
       "value": "3000"
+    },
+    "ANTHROPIC_API_KEY": {
+      "description": "Anthropic (Claude) API key, enables .claude and multi-provider .gpt (optional)",
+      "required": false
+    },
+    "DEEPSEEK_API_KEY": {
+      "description": "DeepSeek API key, enables .deepseek and multi-provider .gpt (optional)",
+      "required": false
+    },
+    "ENABLE_EVAL": {
+      "description": "Leave false. true enables the risky owner code-execution command.",
+      "value": "false"
+    },
+    "TMDB_API_KEY": {
+      "description": "TMDB API key, used by .imdb/.movie for ratings/release year/where-to-watch (optional, free at themoviedb.org)",
+      "required": false
+    },
+    "TMDB_REGION": {
+      "description": "Region code for where-to-watch results, e.g. US, GB, TZ",
+      "value": "US"
     }
   }
 }
