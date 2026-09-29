@@ -251,6 +251,8 @@ module.exports = {
 │➽ .broadcast
 ┗▣
 
+CREATED BY SIRAH TECH
+
 Type ${prefix} before each command!
 
 📢 ${config.channel.name}: ${config.channel.url}
