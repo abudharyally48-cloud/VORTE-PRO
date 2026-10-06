@@ -118,6 +118,7 @@ async function startBot(pairingState, handlers = {}) {
 
 console.log('\n📷 Scan this QR with WhatsApp → Linked Devices → Link a Device:\n');
 qrcode.generate(qr, { small: true });
+    }
       
     if (connection === "close") {
       pairingState.sock = null;
