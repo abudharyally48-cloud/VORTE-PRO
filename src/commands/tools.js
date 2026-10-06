@@ -58,7 +58,17 @@ module.exports = {
         if (!quoted) {
           return sock.sendMessage(chat, { text: "❌ Reply to a view-once message with .vv" });
         }
-        const viewOnce = quoted.viewOnceMessageV2?.message || quoted.viewOnceMessage?.message || quoted.viewOnceMessageV2Extension?.message;
+
+        // Two real formats exist in the wild:
+        // 1. Legacy: the media is wrapped in a viewOnceMessage(V2/V2Extension) container.
+        // 2. Modern: the media is a plain imageMessage/videoMessage with viewOnce:true
+        //    set directly on it — no wrapper at all. Checking only for (1), as an
+        //    earlier version of this command did, means it declines real view-once
+        //    messages sent in format (2), which is what most current clients send.
+        const wrapped = quoted.viewOnceMessageV2?.message || quoted.viewOnceMessage?.message || quoted.viewOnceMessageV2Extension?.message;
+        const isDirectViewOnce = quoted.imageMessage?.viewOnce || quoted.videoMessage?.viewOnce;
+        const viewOnce = wrapped || (isDirectViewOnce ? quoted : null);
+
         if (!viewOnce) {
           return sock.sendMessage(chat, { text: "❌ That is not a view-once message." });
         }
@@ -72,7 +82,7 @@ module.exports = {
             key: { remoteJid: chat, id: contextInfo.stanzaId, participant: contextInfo.participant },
             message: viewOnce
           };
-          const buffer = await downloadMediaMessage(fakeMsg, "buffer", {}, { logger: sock.logger });
+          const buffer = await downloadMediaMessage(fakeMsg, "buffer", {}, { logger: sock.logger, reuploadRequest: sock.updateMediaMessage });
           if (viewOnce.imageMessage) {
             return sock.sendMessage(chat, { image: buffer, caption: viewOnce.imageMessage.caption || "" });
           }
@@ -102,7 +112,7 @@ module.exports = {
             key: { remoteJid: chat, id: contextInfo.stanzaId, participant: contextInfo.participant },
             message: quoted
           };
-          const buffer = await downloadMediaMessage(fakeMsg, "buffer", {}, { logger: sock.logger });
+          const buffer = await downloadMediaMessage(fakeMsg, "buffer", {}, { logger: sock.logger, reuploadRequest: sock.updateMediaMessage });
           if (quoted.imageMessage) {
             return sock.sendMessage(chat, { image: buffer, caption: quoted.imageMessage.caption || "", viewOnce: true });
           }

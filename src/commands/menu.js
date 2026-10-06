@@ -121,8 +121,9 @@ module.exports = {
 ┏▣ ◈ MEDIA & UTILS ◈
 │➽ .sticker
 │➽ .qr
-│➽ .song
-│➽ .yt
+│➽ .song / .play <name>  (search + download audio)
+│➽ .yt / .video <url or search>  (download video)
+│➽ .ytmp3 <url>  (audio from a direct YouTube link)
 │➽ .imdb / .movie <title>  (TMDB: rating, year, where to watch)
 │➽ .randommovie / .randomtv
 ┗▣
@@ -241,8 +242,9 @@ module.exports = {
 
 ┏▣ ◈ EXTRAS ◈
 │➽ .image <prompt>
-│➽ .tiktok
-│➽ .instagram
+│➽ .tiktok / .tt <link>  (download)
+│➽ .ig / .instagram <link>  (download)
+│➽ .tiktokstatus / .igstatus  (check official API config)
 │➽ .channel
 ┗▣
 
@@ -250,8 +252,6 @@ module.exports = {
 │➽ .sudo
 │➽ .broadcast
 ┗▣
-
-CREATED BY SIRAH TECH
 
 Type ${prefix} before each command!
 
