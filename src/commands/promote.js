@@ -14,13 +14,10 @@ module.exports = {
     if (mentions.length === 0) return sock.sendMessage(chat, { text: "Usage: .promote @user" });
 
     try {
-      const metadata = await sock.groupMetadata(chat);
-      const admins = metadata.participants.filter((p) => p.admin).map((p) => p.id);
-      const isAdmin = admins.includes(sender);
-      const isBotAdmin = admins.includes(sock.user.id.split(':')[0] + '@s.whatsapp.net');
+      const perms = await helpers.getPermissions(sock, m);
 
-      if (!isAdmin && !helpers.isOwner(sender)) return sock.sendMessage(chat, { text: "❌ Only admins can use this command." });
-      if (!isBotAdmin) return sock.sendMessage(chat, { text: "❌ Bot needs to be admin to promote others." });
+      if (!perms.isAdmin && !perms.isOwner) return sock.sendMessage(chat, { text: "❌ Only admins can use this command." });
+      if (!perms.isBotAdmin) return sock.sendMessage(chat, { text: "❌ Bot needs to be admin to promote others." });
 
       await sock.groupParticipantsUpdate(chat, mentions, "promote");
       await sock.sendMessage(chat, { text: `✅ Promoted ${mentions.length} user(s)`, mentions });
