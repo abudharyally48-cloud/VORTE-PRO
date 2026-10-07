@@ -118,11 +118,52 @@ function buildArgs(flags = {}) {
  * Run yt-dlp. Resolves with stdout; rejects with an Error carrying
  * .stderr, .exitCode and .timedOut (read by ytdlp.js classifyError).
  */
+/**
+ * Accept either a Netscape cookies.txt or a Cookie-Editor-style JSON export
+ * (array of {domain,path,secure,expirationDate,name,value,...}); JSON is
+ * converted to a Netscape file in storage/tmp so yt-dlp can read it.
+ * Returns the path to hand to --cookies, or null if unusable.
+ */
+function prepareCookies(file) {
+  try {
+    const raw = fs.readFileSync(file, "utf8");
+    const t = raw.trimStart();
+    if (!(t.startsWith("[") || t.startsWith("{"))) return file; // already Netscape
+    let list = JSON.parse(t);
+    if (!Array.isArray(list)) list = list.cookies;
+    if (!Array.isArray(list)) throw new Error("JSON is not a cookie array");
+    const lines = ["# Netscape HTTP Cookie File"];
+    for (const c of list) {
+      if (!c || !c.domain || !c.name) continue;
+      const domain = String(c.domain);
+      const exp = c.expirationDate ? Math.floor(Number(c.expirationDate)) : 0;
+      lines.push([
+        (c.httpOnly ? "#HttpOnly_" : "") + domain,
+        domain.startsWith(".") ? "TRUE" : "FALSE",
+        c.path || "/",
+        c.secure ? "TRUE" : "FALSE",
+        exp,
+        c.name,
+        String(c.value ?? "").replace(/[\r\n\t]/g, "")
+      ].join("\t"));
+    }
+    const out = path.join(__dirname, "../../../storage/tmp/cookies.netscape.txt");
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    fs.writeFileSync(out, lines.join("\n") + "\n", { mode: 0o600 });
+    return out;
+  } catch (e) {
+    console.error("⚠️ Could not read YTDLP_COOKIES file:", e.message);
+    return null;
+  }
+}
+
 /** Host-level options from env, applied to every call (see .env.example). */
+let warnedCookies = false;
 function globalFlags() {
   const f = {};
   const cookies = process.env.YTDLP_COOKIES;               // path to a Netscape cookies.txt
-  if (cookies && fs.existsSync(cookies)) f.cookies = cookies;
+  if (cookies && fs.existsSync(cookies)) { const c = prepareCookies(cookies); if (c) f.cookies = c; }
+  else if (cookies && !warnedCookies) { warnedCookies = true; console.error(`⚠️ YTDLP_COOKIES is set to "${cookies}" but that file does not exist — downloads will run without cookies.`); }
   if (process.env.YTDLP_PROXY) f.proxy = process.env.YTDLP_PROXY;
   const js = process.env.YTDLP_JS_RUNTIME || "node";       // YouTube extraction needs a JS runtime; "off" disables
   if (js !== "off") f.jsRuntimes = js;
@@ -158,4 +199,4 @@ async function json(url, flags, opts) {
   return JSON.parse(await exec(url, flags, opts));
 }
 
-module.exports = { ensureBinary, exec, json, buildArgs, standaloneAsset, BIN_DIR };
+module.exports = { prepareCookies, ensureBinary, exec, json, buildArgs, standaloneAsset, BIN_DIR };
