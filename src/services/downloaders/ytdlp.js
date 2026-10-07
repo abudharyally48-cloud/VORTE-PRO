@@ -2,13 +2,10 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const https = require("https");
-const ytdlpExec = require("yt-dlp-exec");
+const runner = require("./ytdlpRunner");
 const { isFfmpegAvailable } = require("./ffmpegCheck");
 
 const TMP_DIR = path.join(__dirname, "../../../storage/tmp/downloads");
-const BIN_PATH = require("yt-dlp-exec/src/constants").YOUTUBE_DL_PATH;
-const BINARY_FALLBACK_URL = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.YTDLP_TIMEOUT_MS) || 120000; // 2 min
 const DEFAULT_MAX_FILESIZE_MB = Number(process.env.YTDLP_MAX_FILESIZE_MB) || 100;
@@ -17,72 +14,9 @@ function ensureTmpDir() {
   if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
 }
 
-/**
- * Download the fallback binary directly from GitHub's release CDN,
- * bypassing the (rate-limited) GitHub API that yt-dlp-exec's own
- * postinstall script queries. Self-healing: called automatically if the
- * binary isn't present/executable when first needed, so a transient
- * postinstall failure on a given host doesn't permanently break downloads.
- */
-const BINARY_FETCH_TIMEOUT_MS = 30000;
-const MAX_REDIRECTS = 5;
-
-function fetchBinaryDirect() {
-  return new Promise((resolve, reject) => {
-    const dir = path.dirname(BIN_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const file = fs.createWriteStream(BIN_PATH);
-    let settled = false;
-    const fail = (err) => { if (!settled) { settled = true; file.close(); fs.unlink(BIN_PATH, () => {}); reject(err); } };
-    const succeed = () => { if (!settled) { settled = true; resolve(); } };
-
-    const request = (url, redirectsLeft) => {
-      const req = https.get(url, { headers: { "User-Agent": "vorte-pro" } }, (res) => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          res.resume(); // drain so the socket can be reused/closed cleanly
-          if (redirectsLeft <= 0) return fail(new Error("Too many redirects fetching yt-dlp binary"));
-          return request(res.headers.location, redirectsLeft - 1);
-        }
-        if (res.statusCode !== 200) {
-          res.resume();
-          return fail(new Error(`Binary download failed: HTTP ${res.statusCode}`));
-        }
-        res.pipe(file);
-        file.on("finish", () => {
-          file.close(() => {
-            try { fs.chmodSync(BIN_PATH, 0o755); } catch (e) { return fail(e); }
-            succeed();
-          });
-        });
-      });
-      // Every hop gets its own timeout — a single stalled hop can never hang this forever.
-      req.setTimeout(BINARY_FETCH_TIMEOUT_MS, () => {
-        req.destroy(new Error("Timed out fetching yt-dlp binary"));
-      });
-      req.on("error", fail);
-    };
-    request(BINARY_FALLBACK_URL, MAX_REDIRECTS);
-  });
-}
-
-async function isBinaryAvailable() {
-  try {
-    fs.accessSync(BIN_PATH, fs.constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
+// Binary resolution/installation lives in ytdlpRunner (no Python, no npm install scripts).
 async function ensureBinary() {
-  if (await isBinaryAvailable()) return true;
-  try {
-    await fetchBinaryDirect();
-    return await isBinaryAvailable();
-  } catch (err) {
-    console.error("❌ yt-dlp binary install failed:", err.message);
-    return false;
-  }
+  return !!(await runner.ensureBinary());
 }
 
 function uniqueFilePath(ext) {
@@ -111,7 +45,7 @@ function classifyError(err) {
 async function getInfo(url, opts = {}) {
   if (!(await ensureBinary())) throw new Error("yt-dlp is not available on this host.");
   try {
-    return await ytdlpExec(url, {
+    return await runner.json(url, {
       dumpSingleJson: true,
       noWarnings: true,
       noPlaylist: true,
@@ -133,7 +67,7 @@ async function getInfo(url, opts = {}) {
 async function search(query, limit = 5) {
   if (!(await ensureBinary())) throw new Error("yt-dlp is not available on this host.");
   try {
-    const result = await ytdlpExec(`ytsearch${limit}:${query}`, {
+    const result = await runner.json(`ytsearch${limit}:${query}`, {
       dumpSingleJson: true,
       noWarnings: true,
       flatPlaylist: true,
@@ -172,7 +106,7 @@ async function downloadVideo(url, opts = {}) {
     : `best[height<=${maxHeight}][ext=mp4]/best[height<=${maxHeight}]`; // single pre-merged stream only, no merge step
 
   try {
-    await ytdlpExec.exec(url, {
+    await runner.exec(url, {
       output: outPath,
       format,
       noWarnings: true,
@@ -209,7 +143,7 @@ async function downloadAudio(url, opts = {}) {
   const outPath = uniqueFilePath(ext);
 
   try {
-    await ytdlpExec.exec(url, {
+    await runner.exec(url, {
       output: outPath,
       format: "bestaudio/best",
       extractAudio: true,
