@@ -2,7 +2,7 @@
 const fs = require("fs");
 const path = require("path");
 const helpers = require("../utils/helpers");
-const { downloadMediaMessage } = require("@whiskeysockets/baileys");
+const { downloadMediaMessage } = require("baileys");
 
 const MENU_DIR = path.join(__dirname, "../../storage/menu");
 

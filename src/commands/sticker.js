@@ -23,7 +23,7 @@ module.exports = {
       if (Number(media.fileLength || 0) > 25 * 1024 * 1024) return sock.sendMessage(chat, { text: "❌ That media is too large (max 25MB)." });
 
       // Note: downloadMediaMessage is a helper that needs to be implemented or use the one from baileys
-      const { downloadContentFromMessage } = require("@whiskeysockets/baileys");
+      const { downloadContentFromMessage } = require("baileys");
       const type = mediaMsg.message?.imageMessage ? "image" : "video";
       const stream = await downloadContentFromMessage(media, type);
       

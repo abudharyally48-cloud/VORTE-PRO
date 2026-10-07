@@ -76,7 +76,7 @@ module.exports = {
           return sock.sendMessage(chat, { text: "❌ That media is too large (max 25MB)." });
         }
         try {
-          const { downloadMediaMessage } = require("@whiskeysockets/baileys");
+          const { downloadMediaMessage } = require("baileys");
           const contextInfo = m.message.extendedTextMessage.contextInfo;
           const fakeMsg = {
             key: { remoteJid: chat, id: contextInfo.stanzaId, participant: contextInfo.participant },
@@ -106,7 +106,7 @@ module.exports = {
           return sock.sendMessage(chat, { text: "❌ That media is too large (max 25MB)." });
         }
         try {
-          const { downloadMediaMessage } = require("@whiskeysockets/baileys");
+          const { downloadMediaMessage } = require("baileys");
           const contextInfo = m.message.extendedTextMessage.contextInfo;
           const fakeMsg = {
             key: { remoteJid: chat, id: contextInfo.stanzaId, participant: contextInfo.participant },

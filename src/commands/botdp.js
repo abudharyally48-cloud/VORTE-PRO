@@ -1,6 +1,6 @@
 // src/commands/botdp.js
 const helpers = require("../utils/helpers");
-const { downloadMediaMessage } = require("@whiskeysockets/baileys");
+const { downloadMediaMessage } = require("baileys");
 
 module.exports = {
   name: "botdp",
