@@ -59,30 +59,68 @@ const id = mk();
 
   console.log("[acquireSession]");
   let d = dir(); t = io();
-  let s = await acquireSession(d, { SESSION_ID: id }, { ...t, allowPrompt: true });
+  let s = await acquireSession(d, { SESSION_ID: id }, { ...t, allowPrompt: true, root: dir() });
   check("valid env SESSION_ID: no prompt, loaded", s.status === "loaded" && t.text() === "");
   d = dir(); fs.writeFileSync(path.join(d, "creds.json"), "{}"); t = io();
   s = await acquireSession(d, {}, { ...t, hasSavedCreds: true });
   check("no env but saved creds on disk: no prompt", s.status === "saved" && t.text() === "");
 
   d = dir(); t = io(); const env = {};
-  let pa = acquireSession(d, env, { ...t, allowPrompt: true }); await tick();
+  let pa = acquireSession(d, env, { ...t, allowPrompt: true, root: dir() }); await tick();
   t.input.write(id + "\n"); s = await pa;
   check("no SESSION_ID: asks, loads pasted value, writes creds.json", s.status === "loaded" && JSON.parse(fs.readFileSync(path.join(d, "creds.json"), "utf8")).registrationId === 1);
   check("pasted ID is kept in env for reconnects", env.SESSION_ID === id);
   check("ID is never echoed back by the bot", !t.text().includes(id.slice(12, 60)));
 
   d = dir(); t = io();
-  pa = acquireSession(d, { SESSION_ID: "VORTE_PRO~garbage$" }, { ...t, allowPrompt: true }); await tick();
+  pa = acquireSession(d, { SESSION_ID: "VORTE_PRO~garbage$" }, { ...t, allowPrompt: true, root: dir() }); await tick();
   const shown = t.text(); t.input.write(id + "\n"); s = await pa;
   check("invalid env ID: explains, then prompts, then loads pasted one", /SESSION_ID problem/.test(shown) && s.status === "loaded");
 
   d = dir(); t = io(); t.input.end();
-  s = await acquireSession(d, {}, { ...t, allowPrompt: true });
+  s = await acquireSession(d, {}, { ...t, allowPrompt: true, waitForFile: false, root: dir() });
   check("no env + no console -> status missing (bot idles, no crash)", s.status === "missing");
   d = dir(); t = io();
   s = await acquireSession(d, {}, { ...t, allowPrompt: false });
   check("SESSION_PROMPT=false path: no prompt at all", s.status === "missing" && t.text() === "");
+
+  console.log("[session.txt file method]");
+  const fileRoot = () => fs.mkdtempSync(path.join(os.tmpdir(), "froot-"));
+  // console ended (Katabump case) and file appears while waiting
+  let root = fileRoot(); d = dir(); t = io(); t.input.end();
+  pa = acquireSession(d, {}, { ...t, root, pollMs: 40 });
+  await new Promise((r) => setTimeout(r, 150));
+  check("stdin ended: tells operator to create session.txt, keeps waiting", /session\.txt/.test(t.text()));
+  fs.writeFileSync(path.join(root, "session.txt"), id + "\n");
+  s = await pa;
+  check("session.txt appearing later is picked up and loaded", s.status === "loaded" && s.via === "file" && JSON.parse(fs.readFileSync(path.join(d, "creds.json"), "utf8")).registrationId === 1);
+  check("session.txt is deleted after it is read", !fs.existsSync(path.join(root, "session.txt")));
+
+  root = fileRoot(); fs.writeFileSync(path.join(root, "session.txt"), id); d = dir(); t = io();
+  s = await acquireSession(d, {}, { ...t, root, pollMs: 40 });
+  check("session.txt already present at start: used immediately, no prompt", s.status === "loaded" && s.via === "file" && !/Paste your SESSION_ID/.test(t.text()));
+
+  root = fileRoot(); d = dir(); t = io(); t.input.end();
+  pa = acquireSession(d, {}, { ...t, root, pollMs: 40 });
+  fs.writeFileSync(path.join(root, "session.txt"), "VORTE_PRO~notvalid$$"); await new Promise((r) => setTimeout(r, 150));
+  const badShown = t.text();
+  fs.writeFileSync(path.join(root, "session.txt"), mk(creds(5)));
+  s = await pa;
+  check("bad session.txt: reason shown, keeps waiting, fixed file then works", /session\.txt: /.test(badShown) && s.status === "loaded" && JSON.parse(fs.readFileSync(path.join(d, "creds.json"), "utf8")).registrationId === 5);
+
+  root = fileRoot(); d = dir(); t = io(); // console OPEN but silent; file wins and releases the prompt
+  pa = acquireSession(d, {}, { ...t, root, pollMs: 40 });
+  await new Promise((r) => setTimeout(r, 100)); fs.writeFileSync(path.join(root, "session.txt"), id);
+  s = await pa;
+  check("console open + file supplied: file wins, prompt released", s.status === "loaded" && s.via === "file");
+
+  root = fileRoot(); d = dir(); t = io(); t.input.end();
+  s = await acquireSession(d, {}, { ...t, root, waitForFile: false });
+  check("waitForFile=false: returns missing instead of waiting forever", s.status === "missing");
+
+  root = fileRoot(); d = dir(); t = io(); t.input.end(); fs.writeFileSync(path.join(root, "session.txt"), id.slice(0, 80));
+  s = await acquireSession(d, {}, { ...t, root, waitForFile: false });
+  check("incomplete session.txt is not accepted", s.status === "missing" && !fs.existsSync(path.join(d, "creds.json")));
 
   console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
