@@ -10,6 +10,7 @@ function applyTemplate(template, user, groupName) {
 async function handleGroupUpdate(sock, update, getSettings) {
   try {
     const { id, action } = update;
+    require("../../utils/identity").invalidate(id); // roles/membership changed — drop cached metadata
     // Newer Baileys can report participants as objects; accept both shapes.
     const participants = (update.participants || []).map(p => (typeof p === "string" ? p : (p.id || p.jid))).filter(Boolean);
     const settings = getSettings();

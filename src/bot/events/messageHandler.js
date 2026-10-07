@@ -62,6 +62,8 @@ async function handleMessage(sock, upsert, getSettings, saveSettings) {
   const sender = m.key.participant || m.key.remoteJid;
   const isGroupChat = helpers.isGroup(chat);
   chatStore.trackChat(chat);
+  // Baileys v7: learn LID <-> phone pairs for this sender BEFORE any owner/admin check.
+  try { await require("../../utils/identity").resolveSender(sock, m); } catch (e) { console.error("❌ sender resolution failed:", e.message); }
   const settings = getSettings();
   const groupSetting = settings[chat] || {};
   const globalSetting = settings.global || { mode: "public" }; // Default to public
