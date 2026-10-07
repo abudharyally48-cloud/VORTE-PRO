@@ -46,3 +46,7 @@ cookies.txt
 *cookies*.txt
 cookies.json
 *cookies*.json
+
+# SESSION_ID drop-in file (contains your login) — NEVER commit
+session.txt
+session_id.txt
