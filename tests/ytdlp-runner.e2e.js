@@ -9,6 +9,7 @@ const fake = path.join(dir, "yt-dlp");
 fs.writeFileSync(fake, `#!/bin/sh
 case "$*" in *--version*) echo 2099.01.01; exit 0;; esac
 case "$*" in *"-- ytsearch"*) echo '{"entries":[{"id":"abc","title":"Song A","duration":10,"channel":"Ch"}]}'; exit 0;; esac
+case "$*" in *"height<=480"*) echo "ERROR: Requested format is not available" >&2; exit 1;; esac
 case "$*" in *private*) echo "ERROR: Private video. Sign in" >&2; exit 1;; esac
 case "$*" in *slow*) sleep 5; exit 0;; esac
 case "$*" in *--dump-single-json*) echo '{"title":"Fake Title"}'; exit 0;; esac
@@ -29,6 +30,13 @@ const downloaders = require("../src/services/downloaders");
   check("camelCase flags -> kebab args, skips false/undefined", JSON.stringify(a) === JSON.stringify(["--no-playlist", "--max-filesize", "100M", "--dump-single-json"]), JSON.stringify(a));
   check("YTDLP_PATH override is used", (await runner.ensureBinary()) === fake);
   check("ensureBinary (ytdlp.js) true", (await ytdlp.ensureBinary()) === true);
+
+  const cj = path.join(dir, "c.json");
+  fs.writeFileSync(cj, JSON.stringify([{ domain: ".youtube.com", path: "/", secure: true, httpOnly: true, expirationDate: 1900000000.5, name: "SID", value: "abc" }, { domain: "x.com", name: "s", value: "1" }]));
+  const conv = fs.readFileSync(runner.prepareCookies(cj), "utf8").split("\n");
+  check("JSON cookie export converted to Netscape", conv[0].startsWith("# Netscape") && conv[1] === "#HttpOnly_.youtube.com\tTRUE\t/\tTRUE\t1900000000\tSID\tabc" && conv[2] === "x.com\tFALSE\t/\tFALSE\t0\ts\t1", JSON.stringify(conv));
+  const nt = path.join(dir, "c.txt"); fs.writeFileSync(nt, "# Netscape HTTP Cookie File\n");
+  check("Netscape file passed through unchanged", runner.prepareCookies(nt) === nt);
 
   console.log("[ytdlp.js]");
   const info = await ytdlp.getInfo("https://example.com/v");
