@@ -12,6 +12,7 @@ const path = require("path");
 const config = require("../config/config");
 const helpers = require("../utils/helpers");
 const sessionLoader = require("./sessionLoader");
+const { acquireSession } = require("./sessionPrompt");
 
 const QR_ENABLED = process.env.ENABLE_QR === "true";
 let reconnectAttempts = 0;
@@ -32,8 +33,12 @@ async function startBot(pairingState, handlers = {}) {
   helpers.ensureDir(config.sessionFolder);
 
   // ---- Session: SESSION_ID (session-only deployment) ----
-  const session = sessionLoader.applySessionId(config.sessionFolder, process.env.SESSION_ID);
   const hasSavedCreds = fs.existsSync(path.join(config.sessionFolder, "creds.json"));
+  // Uses SESSION_ID / saved credentials; otherwise asks for the ID in the console.
+  const session = await acquireSession(config.sessionFolder, process.env, {
+    allowPrompt: !QR_ENABLED && process.env.SESSION_PROMPT !== "false",
+    hasSavedCreds
+  });
 
   if (session.status === "loaded") console.log(`📦 SESSION_ID loaded for +${session.phone}.`);
   else if (session.status === "unchanged") console.log(`📦 SESSION_ID unchanged (+${session.phone}) — using saved credentials.`);
@@ -46,10 +51,11 @@ async function startBot(pairingState, handlers = {}) {
 
   if (session.status === "invalid") return stop([`SESSION_ID problem: ${session.message}`, "Fix the SESSION_ID variable and restart."]);
   if (session.status === "dead") return stop([session.message]);
-  if (session.status === "missing" && !hasSavedCreds && !QR_ENABLED) {
+  const nowHasCreds = fs.existsSync(path.join(config.sessionFolder, "creds.json"));
+  if (session.status === "missing" && !nowHasCreds && !QR_ENABLED) {
     return stop([
-      "No SESSION_ID is set, so there is nothing to log in with.",
-      "Get one from the VORTE PRO Session ID Generator (pairing code), set it as SESSION_ID, and restart.",
+      "No SESSION_ID was provided, so there is nothing to log in with.",
+      "Set the SESSION_ID variable (or paste it when the console asks) and restart.",
       "(For local testing only, ENABLE_QR=true prints a QR code instead.)"
     ]);
   }

@@ -22,24 +22,24 @@ const sha = (s) => crypto.createHash("sha256").update(s).digest("hex");
  * @returns {{ok:true, full:string, creds:object} | {ok:false, error:string}}
  */
 function parseSessionId(raw) {
-  if (!raw || !String(raw).trim()) return { ok: false, error: "SESSION_ID is empty." };
+  if (!raw || !String(raw).trim()) return { ok: false, code: "EMPTY", error: "SESSION_ID is empty." };
   let v = String(raw).trim().replace(/^["']+|["']+$/g, "").replace(/\s+/g, "");
   const idx = v.indexOf(PREFIX);
-  if (idx === -1) return { ok: false, error: `SESSION_ID must start with "${PREFIX}" (copy the whole value from the generator).` };
+  if (idx === -1) return { ok: false, code: "PREFIX", error: `SESSION_ID must start with "${PREFIX}" (copy the whole value from the generator).` };
   v = v.slice(idx);
   const b64 = v.slice(PREFIX.length);
-  if (!b64 || !/^[A-Za-z0-9+/=_-]+$/.test(b64)) return { ok: false, error: "SESSION_ID contains characters that are not valid base64 — it was probably cut or altered when pasted." };
+  if (!b64 || !/^[A-Za-z0-9+/=_-]+$/.test(b64)) return { ok: false, code: "CHARS", error: "SESSION_ID contains characters that are not valid base64 — it was probably cut or altered when pasted." };
   let creds;
   try {
     creds = JSON.parse(Buffer.from(b64.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"));
   } catch {
-    return { ok: false, error: "SESSION_ID could not be decoded — it is incomplete or corrupted. Generate a new one." };
+    return { ok: false, code: "INCOMPLETE", error: "SESSION_ID could not be decoded — it is incomplete or corrupted. Generate a new one." };
   }
   if (!creds || typeof creds !== "object" || !creds.noiseKey || !creds.signedIdentityKey || creds.registrationId === undefined) {
-    return { ok: false, error: "SESSION_ID decoded, but it is not WhatsApp credentials. Generate a new one." };
+    return { ok: false, code: "NOTCREDS", error: "SESSION_ID decoded, but it is not WhatsApp credentials. Generate a new one." };
   }
   if (!creds.me?.id) {
-    return { ok: false, error: "SESSION_ID is from an unfinished pairing (no account linked). Finish pairing on the generator, then copy the ID." };
+    return { ok: false, code: "UNPAIRED", error: "SESSION_ID is from an unfinished pairing (no account linked). Finish pairing on the generator, then copy the ID." };
   }
   return { ok: true, full: v, creds, phone: String(creds.me.id).split(":")[0].split("@")[0] };
 }
