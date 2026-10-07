@@ -43,7 +43,7 @@ const downloaders = require("../src/services/downloaders");
   check("downloadAudio returns file", fs.existsSync(au.filePath) && /\.(mp3|m4a)$/.test(au.filePath), JSON.stringify(au));
   ytdlp.cleanup(au.filePath);
   let err = await ytdlp.downloadVideo("https://example.com/private").catch(e => e);
-  check("private video -> friendly error, no temp leftovers", err.message === "This content is private.", err.message);
+  check("private video -> friendly error, no temp leftovers", err.message === "This content is private or requires login.", err.message);
   err = await ytdlp.downloadVideo("https://example.com/slow", { timeoutMs: 300 }).catch(e => e);
   check("timeout -> 'Download timed out.'", err.message === "Download timed out.", err.message);
   err = await runner.exec("-weird-url-starting-with-dash", { dumpSingleJson: true }).then(() => null, e => e);
