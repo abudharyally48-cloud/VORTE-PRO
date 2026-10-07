@@ -28,7 +28,12 @@ function uniqueFilePath(ext) {
 function classifyError(err) {
   const msg = String(err?.stderr || err?.message || err || "").toLowerCase();
   if (err?.timedOut) return "Download timed out.";
-  if (msg.includes("private video") || msg.includes("login required")) return "This content is private.";
+  if (msg.includes("confirm you're not a bot") || msg.includes("confirm you\u2019re not a bot") || msg.includes("sign in to confirm")) return "YouTube is blocking this server (bot check). The host needs YTDLP_COOKIES set — see .env.example.";
+  if (msg.includes("http error 429") || msg.includes("too many requests")) return "The source is rate-limiting this server. Try again later.";
+  if (msg.includes("http error 403") || msg.includes("forbidden")) return "The source refused this server's request (HTTP 403).";
+  if (msg.includes("ffmpeg") && (msg.includes("not found") || msg.includes("not installed") || msg.includes("ffprobe"))) return "This download needs ffmpeg, which isn't installed on the host.";
+  if (msg.includes("requested format is not available")) return "No downloadable format was found for that link.";
+  if (msg.includes("private video") || msg.includes("login required") || msg.includes("log in") || msg.includes("login")) return "This content is private or requires login.";
   if (msg.includes("video unavailable") || msg.includes("this video is not available")) return "Video unavailable.";
   if (msg.includes("unsupported url") || msg.includes("no extractor")) return "Unsupported URL.";
   if (msg.includes("file is larger than max-filesize") || msg.includes("max-filesize")) return "File is too large.";

@@ -118,11 +118,22 @@ function buildArgs(flags = {}) {
  * Run yt-dlp. Resolves with stdout; rejects with an Error carrying
  * .stderr, .exitCode and .timedOut (read by ytdlp.js classifyError).
  */
+/** Host-level options from env, applied to every call (see .env.example). */
+function globalFlags() {
+  const f = {};
+  const cookies = process.env.YTDLP_COOKIES;               // path to a Netscape cookies.txt
+  if (cookies && fs.existsSync(cookies)) f.cookies = cookies;
+  if (process.env.YTDLP_PROXY) f.proxy = process.env.YTDLP_PROXY;
+  const js = process.env.YTDLP_JS_RUNTIME || "node";       // YouTube extraction needs a JS runtime; "off" disables
+  if (js !== "off") f.jsRuntimes = js;
+  return f;
+}
+
 async function exec(url, flags = {}, { timeout = 120000 } = {}) {
   const cmd = await ensureBinary();
   if (!cmd) throw new Error("yt-dlp is not available on this host.");
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, [...buildArgs(flags), "--", String(url)], { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(cmd, [...buildArgs({ ...globalFlags(), ...flags }), "--", String(url)], { stdio: ["ignore", "pipe", "pipe"] });
     let out = "", err = "", timedOut = false, overflow = false;
     const timer = setTimeout(() => { timedOut = true; child.kill("SIGKILL"); }, timeout);
     child.stdout.on("data", (d) => {
@@ -136,6 +147,7 @@ async function exec(url, flags = {}, { timeout = 120000 } = {}) {
       if (code === 0 && !timedOut && !overflow) return resolve(out);
       const e = new Error(timedOut ? "yt-dlp timed out" : overflow ? "yt-dlp output too large" : (err.trim().split("\n").pop() || `yt-dlp exited with code ${code}`));
       e.stderr = err; e.exitCode = code; e.timedOut = timedOut;
+      if (!timedOut) console.error(`❌ [yt-dlp] exit ${code} for ${String(url).slice(0, 80)}:\n${err.trim().split("\n").slice(-6).join("\n")}`);
       reject(e);
     });
   });
