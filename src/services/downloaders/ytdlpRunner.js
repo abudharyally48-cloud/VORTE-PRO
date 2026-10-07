@@ -115,10 +115,6 @@ function buildArgs(flags = {}) {
 }
 
 /**
- * Run yt-dlp. Resolves with stdout; rejects with an Error carrying
- * .stderr, .exitCode and .timedOut (read by ytdlp.js classifyError).
- */
-/**
  * Accept either a Netscape cookies.txt or a Cookie-Editor-style JSON export
  * (array of {domain,path,secure,expirationDate,name,value,...}); JSON is
  * converted to a Netscape file in storage/tmp so yt-dlp can read it.
@@ -157,19 +153,48 @@ function prepareCookies(file) {
   }
 }
 
+const ROOT_DIR = path.join(__dirname, "../../..");
+const AUTH_COOKIES = ["SID", "SAPISID", "__Secure-1PSID", "__Secure-3PSID", "LOGIN_INFO", "sessionid"];
+
+/** YTDLP_COOKIES if set, else cookies.json / cookies.txt in the project folder (or storage/). */
+function findCookiesFile(env = process.env, root = ROOT_DIR) {
+  const candidates = [env.YTDLP_COOKIES, path.join(root, "cookies.json"), path.join(root, "cookies.txt"), path.join(root, "storage", "cookies.json"), path.join(root, "storage", "cookies.txt")];
+  return candidates.find((c) => c && fs.existsSync(c)) || null;
+}
+
+let loggedCookies = false;
+/** One-time, value-free summary so you can tell whether cookies were really picked up. */
+function logCookieSummary(file, netscapePath) {
+  if (loggedCookies) return;
+  loggedCookies = true;
+  try {
+    const lines = fs.readFileSync(netscapePath, "utf8").split("\n").filter((l) => l && (!l.startsWith("#") || l.startsWith("#HttpOnly_")));
+    const names = new Set(lines.map((l) => l.split("\t")[5]));
+    const yt = lines.filter((l) => /youtube\.com|google\.com/.test(l.split("\t")[0]));
+    const hasAuth = AUTH_COOKIES.some((n) => names.has(n));
+    console.log(`🍪 yt-dlp cookies: ${file} (${lines.length} cookies, ${yt.length} for youtube/google, login cookie present: ${hasAuth ? "yes" : "NO — export again while logged in"})`);
+  } catch (e) {
+    console.error("⚠️ Could not summarise cookies file:", e.message);
+  }
+}
+
 /** Host-level options from env, applied to every call (see .env.example). */
 let warnedCookies = false;
 function globalFlags() {
   const f = {};
-  const cookies = process.env.YTDLP_COOKIES;               // path to a Netscape cookies.txt
-  if (cookies && fs.existsSync(cookies)) { const c = prepareCookies(cookies); if (c) f.cookies = c; }
-  else if (cookies && !warnedCookies) { warnedCookies = true; console.error(`⚠️ YTDLP_COOKIES is set to "${cookies}" but that file does not exist — downloads will run without cookies.`); }
+  const cookies = findCookiesFile();
+  if (cookies) { const c = prepareCookies(cookies); if (c) { f.cookies = c; logCookieSummary(cookies, c); } }
+  else if (process.env.YTDLP_COOKIES && !warnedCookies) { warnedCookies = true; console.error(`⚠️ YTDLP_COOKIES is set to "${process.env.YTDLP_COOKIES}" but that file does not exist — downloads will run without cookies.`); }
   if (process.env.YTDLP_PROXY) f.proxy = process.env.YTDLP_PROXY;
   const js = process.env.YTDLP_JS_RUNTIME || "node";       // YouTube extraction needs a JS runtime; "off" disables
   if (js !== "off") f.jsRuntimes = js;
   return f;
 }
 
+/**
+ * Run yt-dlp. Resolves with stdout; rejects with an Error carrying
+ * .stderr, .exitCode and .timedOut (read by ytdlp.js classifyError).
+ */
 async function exec(url, flags = {}, { timeout = 120000 } = {}) {
   const cmd = await ensureBinary();
   if (!cmd) throw new Error("yt-dlp is not available on this host.");
@@ -199,4 +224,4 @@ async function json(url, flags, opts) {
   return JSON.parse(await exec(url, flags, opts));
 }
 
-module.exports = { prepareCookies, ensureBinary, exec, json, buildArgs, standaloneAsset, BIN_DIR };
+module.exports = { findCookiesFile, prepareCookies, ensureBinary, exec, json, buildArgs, standaloneAsset, BIN_DIR };
