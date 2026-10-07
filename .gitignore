@@ -40,3 +40,9 @@ logs/
 # Auto-downloaded yt-dlp binary and download temp files
 storage/bin/
 storage/tmp/
+
+# yt-dlp cookies contain your login — NEVER commit
+cookies.txt
+*cookies*.txt
+cookies.json
+*cookies*.json
