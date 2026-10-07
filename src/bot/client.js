@@ -11,6 +11,10 @@ const fs = require("fs");
 const path = require("path");
 const config = require("../config/config");
 const helpers = require("../utils/helpers");
+const sessionLoader = require("./sessionLoader");
+
+const QR_ENABLED = process.env.ENABLE_QR === "true";
+let reconnectAttempts = 0;
 
 // Suppress annoying libsignal Bad MAC errors during initial sync
 const originalConsoleError = console.error;
@@ -27,48 +31,27 @@ async function startBot(pairingState, handlers = {}) {
 
   helpers.ensureDir(config.sessionFolder);
 
-  let shouldPrintQR = !process.env.SESSION_ID;
+  // ---- Session: SESSION_ID (session-only deployment) ----
+  const session = sessionLoader.applySessionId(config.sessionFolder, process.env.SESSION_ID);
+  const hasSavedCreds = fs.existsSync(path.join(config.sessionFolder, "creds.json"));
 
-  if (process.env.SESSION_ID) {
-    const match = process.env.SESSION_ID.match(/VORTE_PRO~([A-Za-z0-9+/=]+)/);
-    if (match) {
-      try {
-        const credsPath = path.join(config.sessionFolder, 'creds.json');
-        const hashPath = path.join(config.sessionFolder, '.session_hash');
-        
-        let lastSessionId = '';
-        if (fs.existsSync(hashPath)) {
-          lastSessionId = fs.readFileSync(hashPath, 'utf8');
-        }
+  if (session.status === "loaded") console.log(`📦 SESSION_ID loaded for +${session.phone}.`);
+  else if (session.status === "unchanged") console.log(`📦 SESSION_ID unchanged (+${session.phone}) — using saved credentials.`);
 
-        const fullSessionId = match[0];
-        const b64 = match[1];
+  const stop = (lines) => {
+    console.error("\n" + lines.map((l) => "❌ " + l).join("\n") + "\n");
+    pairingState.sock = null;
+    return null; // bot stays idle (web server keeps running) instead of crash-looping against WhatsApp
+  };
 
-        if (fullSessionId !== lastSessionId) {
-          console.log('📦 New SESSION_ID detected in environment. Loading credentials...');
-          
-          // Clear out old session files
-          if (fs.existsSync(config.sessionFolder)) {
-            const files = fs.readdirSync(config.sessionFolder);
-            for (const file of files) {
-               try { fs.unlinkSync(path.join(config.sessionFolder, file)); } catch(e) {}
-            }
-          } else {
-            helpers.ensureDir(config.sessionFolder);
-          }
-
-          const credsBuffer = Buffer.from(b64, 'base64');
-          fs.writeFileSync(credsPath, credsBuffer);
-          fs.writeFileSync(hashPath, fullSessionId);
-          console.log('✅ Session loaded successfully from SESSION_ID.');
-        }
-      } catch (err) {
-        console.error('❌ Failed to load SESSION_ID from environment:', err.message);
-      }
-    } else {
-      console.log('⚠️ SESSION_ID found in environment but does not contain a valid VORTE_PRO~ segment.');
-      shouldPrintQR = true;
-    }
+  if (session.status === "invalid") return stop([`SESSION_ID problem: ${session.message}`, "Fix the SESSION_ID variable and restart."]);
+  if (session.status === "dead") return stop([session.message]);
+  if (session.status === "missing" && !hasSavedCreds && !QR_ENABLED) {
+    return stop([
+      "No SESSION_ID is set, so there is nothing to log in with.",
+      "Get one from the VORTE PRO Session ID Generator (pairing code), set it as SESSION_ID, and restart.",
+      "(For local testing only, ENABLE_QR=true prints a QR code instead.)"
+    ]);
   }
 
   const { state, saveCreds } = await useMultiFileAuthState(config.sessionFolder);
@@ -113,36 +96,53 @@ async function startBot(pairingState, handlers = {}) {
 
     if (qr) {
       pairingState.latestQR = qr;
-      // Render the QR in the terminal (Baileys 7 no longer does this automatically).
-     const qrcode = require('qrcode-terminal');
-
-console.log('\n📷 Scan this QR with WhatsApp → Linked Devices → Link a Device:\n');
-qrcode.generate(qr, { small: true });
+      if (!QR_ENABLED) {
+        console.error("❌ WhatsApp is asking for a new login (QR) — the saved session is not valid. Generate a new SESSION_ID. (Set ENABLE_QR=true to print QR codes.)");
+      } else {
+        // Render the QR in the terminal (Baileys 7 no longer does this automatically).
+        const qrcode = require("qrcode-terminal");
+        console.log("\n📷 Scan this QR with WhatsApp → Linked Devices → Link a Device:\n");
+        qrcode.generate(qr, { small: true });
+      }
     }
-      
+
     if (connection === "close") {
       pairingState.sock = null;
       const code = lastDisconnect?.error?.output?.statusCode;
-      const shouldReconnect = code !== DisconnectReason.loggedOut;
-      console.log(`🔌 Connection closed (Code: ${code}). Reconnecting: ${shouldReconnect}`);
+      console.log(`🔌 Connection closed (Code: ${code}).`);
 
-      if (!shouldReconnect) {
-        console.log('🔑 This session was logged out from WhatsApp. Delete the storage/session folder (or supply a fresh SESSION_ID) and restart to pair again.');
+      // Cases where reconnecting is pointless or harmful:
+      if (code === DisconnectReason.loggedOut || code === 403) {
+        sessionLoader.markDead(config.sessionFolder, process.env.SESSION_ID);
+        console.error("❌ WhatsApp logged this session out (or banned it). Generate a NEW SESSION_ID, set it, and restart. Not reconnecting.");
+        return;
       }
-      if (shouldReconnect) {
-        setTimeout(() => startBot(pairingState, handlers), 5000);
+      if (code === DisconnectReason.connectionReplaced) { // 440
+        console.error("❌ This session was opened somewhere else (same SESSION_ID running on another host/instance). Stop the other one — not reconnecting, to avoid a fight.");
+        return;
       }
+      if (code === DisconnectReason.badSession) { // 500: corrupted local state -> rebuild from SESSION_ID
+        console.error("⚠️ Local session state was corrupted — rebuilding from SESSION_ID.");
+        sessionLoader.forgetLoaded(config.sessionFolder);
+      }
+
+      // Everything else (incl. 515 restart-after-pairing): reconnect with growing delay.
+      const delay = code === DisconnectReason.restartRequired ? 1000 : Math.min(5000 * 2 ** reconnectAttempts, 60000);
+      reconnectAttempts++;
+      console.log(`🔄 Reconnecting in ${Math.round(delay / 1000)}s...`);
+      setTimeout(() => startBot(pairingState, handlers), delay);
     }
 
     if (connection === "open") {
       const devicePhone = sock.user.id.split(':')[0];
+      reconnectAttempts = 0;
       console.log(`✅ Connected successfully as ${devicePhone}`);
       pairingState.latestQR = null;
 
       // Send startup confirmation to the bot's own number
       const jid = `${devicePhone}@s.whatsapp.net`;
       sock.sendMessage(jid, { 
-        text: `🤖 *VORTE-PRO SYSTEM ONLINE*\n\n✅ Successfully securely connected.\n📡 Environment: ${process.env.SESSION_ID ? 'Render/Hosted (.env)' : 'Local Storage'}\n⚡ The bot is now actively monitoring events.`
+        text: `🤖 *VORTE-PRO SYSTEM ONLINE*\n\n✅ Successfully securely connected.\n📡 Environment: ${process.env.SESSION_ID ? 'Hosted (SESSION_ID)' : 'Local Storage'}\n⚡ The bot is now actively monitoring events.`
       }).catch(err => console.error("Failed to send startup message:", err));
     }
   });
