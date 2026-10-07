@@ -3,6 +3,7 @@ const fs = require('fs');
 const config = require('../config/config');
 const path = require('path');
 const sudoStore = require('./sudoStore');
+const identity = require('./identity');
 
 /**
  * Check if a JID is a group
@@ -70,7 +71,10 @@ function normalizeJid(jid) {
  */
 function isTrueOwner(jid) {
   if (!jid) return false;
-  const num = normalizeJid(jid);
+  // A @lid sender is mapped back to its phone number (learned per message by
+  // identity.resolveSender); plain phone JIDs / digit strings behave as before.
+  const num = identity.keyOf(jid) ? (identity.toPn(jid) || '') : normalizeJid(jid);
+  if (!num) return false;
   const owners = [config.owner1, config.owner2, ...(config.sudo || [])].filter(Boolean);
   return owners.some(o => num === normalizeJid(o));
 }
@@ -85,7 +89,8 @@ function isTrueOwner(jid) {
 function isOwner(jid) {
   if (!jid) return false;
   if (isTrueOwner(jid)) return true;
-  const num = normalizeJid(jid);
+  const num = identity.keyOf(jid) ? (identity.toPn(jid) || '') : normalizeJid(jid);
+  if (!num) return false;
   return sudoStore.list().some(n => n === num);
 }
 
@@ -100,44 +105,36 @@ function isOwner(jid) {
  * @returns {Promise<boolean>}
  */
 async function isAdmin(sock, chat, user) {
-  if (!isGroup(chat)) return false;
-  if (!user) return false;
-  try {
-    const metadata = await sock.groupMetadata(chat);
-    const targetNum = normalizeJid(user);
-    return metadata.participants.some((p) => {
-      if (!p.admin) return false; // covers both 'admin' and 'superadmin'
-      // A participant can carry both a phone-JID and a lid-JID depending on
-      // the WhatsApp version; check every identifier field Baileys exposes.
-      const candidates = [p.id, p.jid, p.lid].filter(Boolean).map(normalizeJid);
-      return candidates.includes(targetNum);
-    });
-  } catch (e) {
-    console.error('❌ isAdmin check failed:', e.message);
-    return false;
-  }
+  return identity.isGroupAdmin(sock, chat, user);
 }
 
 /**
- * Check if the bot is an admin in a group
+ * Check if the bot is an admin in a group (matches the bot's phone JID AND its LID).
  * @param {object} sock
  * @param {string} chat
  * @returns {Promise<boolean>}
  */
 async function isBotAdmin(sock, chat) {
-  if (!isGroup(chat)) return false;
-  try {
-    const botNum = normalizeJid(sock.user?.id);
-    const metadata = await sock.groupMetadata(chat);
-    return metadata.participants.some((p) => {
-      if (!p.admin) return false;
-      const candidates = [p.id, p.jid, p.lid].filter(Boolean).map(normalizeJid);
-      return candidates.includes(botNum);
-    });
-  } catch (e) {
-    console.error('❌ isBotAdmin check failed:', e.message);
-    return false;
-  }
+  return identity.isBotGroupAdmin(sock, chat);
+}
+
+/**
+ * Central permission lookup for one message. Use this instead of re-deriving
+ * owner/admin/bot-admin inside commands.
+ * @returns {Promise<{chat:string, sender:string, isGroup:boolean, isOwner:boolean, isAdmin:boolean, isBotAdmin:boolean}>}
+ */
+async function getPermissions(sock, m) {
+  const chat = m.key.remoteJid;
+  const sender = m.key.participant || m.key.remoteJid;
+  await identity.resolveSender(sock, m);
+  const group = isGroup(chat);
+  const owner = isOwner(sender) || !!m.key?.fromMe;
+  const ids = [sender, m.key.participantAlt].filter(Boolean);
+  return {
+    chat, sender, isGroup: !!group, isOwner: owner,
+    isAdmin: group ? await identity.isGroupAdmin(sock, chat, ids) : false,
+    isBotAdmin: group ? await identity.isBotGroupAdmin(sock, chat) : false
+  };
 }
 
 /**
@@ -182,6 +179,7 @@ module.exports = {
   isOwner,
   isAdmin,
   isBotAdmin,
+  getPermissions,
   matchPrefix,
   getBody
 };

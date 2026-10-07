@@ -13,18 +13,16 @@ const helpers = require("./helpers");
  */
 async function guardGroupAdmin(sock, m, opts = {}) {
   const chat = m.key.remoteJid;
-  const sender = m.key.participant || m.key.remoteJid;
-
   if (!helpers.isGroup(chat)) {
     await sock.sendMessage(chat, { text: "❌ This command is for groups only." });
     return false;
   }
-  const isOwner = helpers.isOwner(sender) || m.key?.fromMe;
-  if (!isOwner && !(await helpers.isAdmin(sock, chat, sender))) {
+  const perms = await helpers.getPermissions(sock, m);
+  if (!perms.isOwner && !perms.isAdmin) {
     await sock.sendMessage(chat, { text: "❌ Only group admins or my owner can use this." });
     return false;
   }
-  if (opts.botAdmin && !(await helpers.isBotAdmin(sock, chat))) {
+  if (opts.botAdmin && !perms.isBotAdmin) {
     await sock.sendMessage(chat, { text: "❌ I need to be a group admin to do that. Please make me an admin first." });
     return false;
   }
