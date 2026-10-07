@@ -20,7 +20,8 @@ VORTE PRO is self-hosted: **each installation owns its own WhatsApp session**. N
 
 How the bot treats it:
 - The value is validated on start (it must decode to real, fully-paired WhatsApp credentials). Quotes and line breaks added by copy/paste are tolerated; a cut or altered ID gets a clear error instead of a silent QR loop.
-- If `SESSION_ID` is missing or invalid the bot **stays idle and prints why** — it does not spin on QR codes. (`ENABLE_QR=true` re-enables the terminal QR for local testing only.)
+- **No SESSION_ID? Paste it in the console.** If `SESSION_ID` is missing, invalid, or logged out, the bot asks you to paste it into the console (panel console, SSH or terminal) and starts as soon as it's valid. A paste that the console cuts into several lines is stitched together; type `reset` to start over. The pasted ID is saved as credentials, so restarts on a persistent disk don't ask again. On hosts with no console attached (e.g. Render) the bot doesn't wait — it stays idle and prints why. Set `SESSION_PROMPT=false` to disable the prompt. Note the console shows what you paste; treat the panel's console like a password field.
+- `ENABLE_QR=true` re-enables the terminal QR for local testing only.
 - Using the **same** `SESSION_ID` again after a restart keeps the saved (fresher) credentials; supplying a **new** `SESSION_ID` replaces them.
 - If WhatsApp logs the session out, the bot stops, prints `Generate a NEW SESSION_ID`, and will not retry that dead ID on restart (so a crash-restarting panel doesn't hammer WhatsApp).
 - **One session = one running bot.** If the same `SESSION_ID` is running on two hosts (e.g. an old Render service and a new panel) WhatsApp disconnects one with code 440; the bot stops instead of fighting. Stop the other deployment.
