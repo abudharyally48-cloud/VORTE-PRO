@@ -38,10 +38,10 @@ Copy the `.env.example` to `.env` and fill in your configuration:
 cp .env.example .env
 ```
 > [!TIP]
-> Paste your `SESSION_ID` in the `.env` file to skip the QR code scan on every restart.
+> Deployment uses a `SESSION_ID`. Without one the bot stays idle and tells you how to get one (the web Session Generator below keeps running).
 
 ### 4. Session Management & Pairing
-There are two ways to link your WhatsApp account:
+Link your WhatsApp account with a `SESSION_ID`:
 
 #### A. Web Session Generator (Recommended for Servers)
 1. Start the bot: `npm start`.
@@ -51,8 +51,8 @@ There are two ways to link your WhatsApp account:
 5. Once connected, the bot will send your **Session ID** directly to your WhatsApp.
 6. Copy this ID into your `.env` file as `SESSION_ID="YOUR_ID_HERE"`.
 
-#### B. Terminal QR Code (Quick Local Setup)
-If no `SESSION_ID` is provided in `.env`, the bot will automatically print a QR code in your terminal. Scan it using WhatsApp → Linked Devices → Link a Device.
+#### B. Terminal QR Code (local testing only)
+Set `ENABLE_QR=true` and leave `SESSION_ID` empty to print a QR code in the terminal. Not used for hosted deployments.
 
 ### 5. Running the Bot
 ```bash

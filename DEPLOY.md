@@ -12,12 +12,19 @@ However, the **menu picture/video** set via `.setmenudisplay` is saved locally t
 
 ---
 
-## 🔐 Authentication (two supported methods)
+## 🔐 Authentication (SESSION_ID)
 
-VORTE PRO is self-hosted: **each installation owns its own WhatsApp session**, stored locally in `storage/session`. Nothing is sent to a central server.
+VORTE PRO is self-hosted: **each installation owns its own WhatsApp session**. Nothing is sent to a central server.
 
-1. **SESSION_ID (recommended for hosted panels):** open the official VORTE PRO Session ID Generator website, pair your number with the pairing code, copy the `VORTE_PRO~...` value it gives you, and set it as the `SESSION_ID` environment variable. The bot loads it and connects — no QR needed. The bot never generates Session IDs itself.
-2. **Terminal QR:** leave `SESSION_ID` empty. On first start a QR code is printed in the console; scan it in WhatsApp → Linked Devices. Credentials are then saved locally and the bot reconnects automatically. (If WhatsApp logs the session out, delete `storage/session` and restart to pair again.)
+**SESSION_ID (the supported way to deploy):** open the official VORTE PRO Session ID Generator website, pair your number with the pairing code, copy the whole `VORTE_PRO~...` value it gives you, and set it as the `SESSION_ID` environment variable. The bot loads it and connects — no QR needed. The bot never generates Session IDs itself.
+
+How the bot treats it:
+- The value is validated on start (it must decode to real, fully-paired WhatsApp credentials). Quotes and line breaks added by copy/paste are tolerated; a cut or altered ID gets a clear error instead of a silent QR loop.
+- If `SESSION_ID` is missing or invalid the bot **stays idle and prints why** — it does not spin on QR codes. (`ENABLE_QR=true` re-enables the terminal QR for local testing only.)
+- Using the **same** `SESSION_ID` again after a restart keeps the saved (fresher) credentials; supplying a **new** `SESSION_ID` replaces them.
+- If WhatsApp logs the session out, the bot stops, prints `Generate a NEW SESSION_ID`, and will not retry that dead ID on restart (so a crash-restarting panel doesn't hammer WhatsApp).
+- **One session = one running bot.** If the same `SESSION_ID` is running on two hosts (e.g. an old Render service and a new panel) WhatsApp disconnects one with code 440; the bot stops instead of fighting. Stop the other deployment.
+- On hosts that wipe the disk on restart, the bot logs in from `SESSION_ID` each time. Some chat encryption state is rebuilt on demand, so an occasional first message after a restart may need to be resent. Mount a persistent disk at `storage/` (or set `SESSION_FOLDER`) to avoid that.
 
 ### Security switches (both default to OFF)
 | Variable | Effect |
