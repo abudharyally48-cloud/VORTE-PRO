@@ -10,7 +10,7 @@ const {
   fetchLatestBaileysVersion,
   DisconnectReason,
   Browsers
-} = require("@whiskeysockets/baileys");
+} = require("baileys");
 const config = require('../config/config');
 
 const app = express();
