@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "setstatusreact",
+  scope: "OWNER",
   description: "Set the emojis used by autoreacttostatus (owner only). Usage: .setstatusreact 😍,🔥  (or reset)",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

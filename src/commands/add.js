@@ -1,34 +1,28 @@
-// src/commands/add.js
-const helpers = require("../utils/helpers");
-const { guardGroupAdmin } = require("../utils/guards");
+// src/commands/add.js — add number(s) to the group.
+const groupOps = require("../utils/groupOps");
+const { panel } = require("../utils/ui");
+
+const TITLE = "👥 GROUP MANAGEMENT";
 
 module.exports = {
   name: "add",
+  scope: "GROUP",
+  admin: true,
+  botAdmin: true,
   description: "Add someone to the group (admin only). Usage: .add 255700000000 [more numbers]",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
-    if (!(await guardGroupAdmin(sock, m, { botAdmin: true }))) return;
+    const numbers = [...new Set(args.map((a) => a.replace(/[^0-9]/g, "")).filter((n) => n.length >= 7 && n.length <= 15))].slice(0, 10);
+    if (!numbers.length) return sock.sendMessage(chat, { text: panel(TITLE, ["Usage: .add <number with country code> [more numbers]"]) });
 
-    const numbers = [...new Set(args.map(a => a.replace(/[^0-9]/g, "")).filter(n => n.length >= 7 && n.length <= 15))].slice(0, 10);
-    if (!numbers.length) return sock.sendMessage(chat, { text: "Usage: .add <number with country code> [more numbers]" });
-
-    try {
-      const results = await sock.groupParticipantsUpdate(chat, numbers.map(n => `${n}@s.whatsapp.net`), "add");
-      const lines = (results || []).map(r => {
-        const num = "+" + helpers.normalizeJid(r.jid || "");
-        switch (String(r.status)) {
-          case "200": return `✅ ${num} added`;
-          case "409": return `ℹ️ ${num} is already in the group`;
-          case "403": return `🔒 ${num} has privacy settings that block direct adds — send them the invite link instead (.link)`;
-          case "408": return `⚠️ ${num} recently left; can't be re-added right now`;
-          case "401": return `❌ ${num} has blocked the bot`;
-          default: return `❌ ${num} could not be added (status ${r.status})`;
-        }
-      });
-      await sock.sendMessage(chat, { text: lines.join("\n") || "❌ No result returned." });
-    } catch (err) {
-      console.error("❌ add error:", err.message);
-      await sock.sendMessage(chat, { text: "❌ Couldn't add them." });
+    const jids = numbers.map((n) => `${n}@s.whatsapp.net`);
+    const res = await groupOps.participantAction(sock, chat, jids, "add");
+    const lines = [];
+    if (res.ok.length) lines.push(`✅ Added: ${res.ok.map((j) => "+" + groupOps.digits(j)).join(", ")}`);
+    for (const f of res.failed) {
+      const hint = /privacy/.test(f.reason) ? " — send them the invite link instead (.gclink)" : "";
+      lines.push(`⚠️ +${groupOps.digits(f.jid)}: ${f.reason}${hint}`);
     }
+    await sock.sendMessage(chat, { text: panel(TITLE, lines) });
   }
 };

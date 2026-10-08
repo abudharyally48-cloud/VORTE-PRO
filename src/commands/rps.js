@@ -1,6 +1,7 @@
 // src/commands/rps.js
 module.exports = {
   name: "rps",
+  scope: "BOTH",
   description: "Play rock-paper-scissors against the bot",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

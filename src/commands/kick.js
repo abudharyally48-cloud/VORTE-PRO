@@ -1,31 +1,28 @@
-// src/commands/kick.js
-const helpers = require("../utils/helpers");
+// src/commands/kick.js — remove user(s). Targets: @mention(s), a replied-to message, or a number.
+const identity = require("../utils/identity");
+const groupOps = require("../utils/groupOps");
+const { panel } = require("../utils/ui");
+
+const TITLE = "👥 GROUP MANAGEMENT";
 
 module.exports = {
   name: "kick",
-  description: "Remove a user from the group",
+  scope: "GROUP",
+  admin: true,
+  botAdmin: true,
+  description: "Remove a user from the group. Usage: .kick @user (or reply to their message)",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
-    if (!helpers.isGroup(chat)) return sock.sendMessage(chat, { text: "❌ This command can only be used in groups." });
+    const targets = groupOps.resolveTargets(m, args);
+    if (!targets.length) return sock.sendMessage(chat, { text: panel(TITLE, ["Usage: .kick @user  (or reply to their message)"]) });
 
-    const sender = m.key.participant || m.key.remoteJid;
-    const mentions = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+    const meta = await identity.getMetadata(sock, chat);
+    const { allowed, blocked } = groupOps.protect(sock, meta, targets, "remove");
+    const res = allowed.length ? await groupOps.participantAction(sock, chat, allowed, "remove") : { ok: [], failed: [] };
 
-    if (mentions.length === 0) return sock.sendMessage(chat, { text: "Usage: .kick @user" });
-
-    try {
-      if (!(await helpers.isAdmin(sock, chat, sender)) && !helpers.isOwner(sender)) {
-        return sock.sendMessage(chat, { text: "❌ Only admins can use this command." });
-      }
-      if (!(await helpers.isBotAdmin(sock, chat))) {
-        return sock.sendMessage(chat, { text: "❌ Bot needs to be admin to kick others." });
-      }
-
-      await sock.groupParticipantsUpdate(chat, mentions, "remove");
-      await sock.sendMessage(chat, { text: `👢 Removed ${mentions.length} user(s)`, mentions });
-    } catch (err) {
-      console.error(err);
-      await sock.sendMessage(chat, { text: "❌ Failed to remove user(s)." });
-    }
-  },
+    const lines = [];
+    if (res.ok.length) lines.push(`👢 Removed: ${res.ok.map(groupOps.mentionText).join(", ")}`);
+    for (const f of [...res.failed, ...blocked]) lines.push(`⚠️ Couldn't remove ${groupOps.mentionText(f.jid)}: ${f.reason}`);
+    await sock.sendMessage(chat, { text: panel(TITLE, lines), mentions: targets });
+  }
 };

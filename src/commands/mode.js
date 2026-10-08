@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: 'mode',
+  scope: "OWNER",
   description: 'Change bot mode (public/self)',
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

@@ -1,27 +1,31 @@
 // src/commands/unmute.js
+const identity = require("../utils/identity");
 const helpers = require("../utils/helpers");
+const groupOps = require("../utils/groupOps");
+const { panel } = require("../utils/ui");
+
+const TITLE = "👥 GROUP MANAGEMENT";
 
 module.exports = {
   name: "unmute",
-  description: "Lift a mute early. Usage: .unmute @user",
+  scope: "GROUP",
+  admin: true,
+  description: "Lift a mute early. Usage: .unmute @user (or reply to their message)",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;
-    const sender = m.key.participant || m.key.remoteJid;
-    if (!helpers.isGroup(chat)) return sock.sendMessage(chat, { text: "❌ This command is for groups only." });
-
-    const isOwner = helpers.isOwner(sender) || m.key?.fromMe;
-    const isAdmin = await helpers.isAdmin(sock, chat, sender);
-    if (!isOwner && !isAdmin) return sock.sendMessage(chat, { text: "❌ Only group admins or my owner can use this." });
-
-    const target = m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-    if (!target) return sock.sendMessage(chat, { text: "❌ Usage: .unmute @user" });
-
+    const target = groupOps.resolveTargets(m, [])[0];
+    if (!target) return sock.sendMessage(chat, { text: panel(TITLE, ["Usage: .unmute @user  (or reply to their message)"]) });
     const settings = getSettings();
-    if (settings[chat]?.mutedUsers) {
-      delete settings[chat].mutedUsers[helpers.normalizeJid(target)];
+    const muted = settings[chat]?.mutedUsers;
+    let wasMuted = false;
+    if (muted) {
+      const meta = await identity.getMetadata(sock, chat).catch(() => null);
+      const p = meta && groupOps.findParticipant(meta, target);
+      for (const k of [identity.toPn(target), helpers.normalizeJid(target), p && identity.toPn(p.id), p && helpers.normalizeJid(p.id)].filter(Boolean)) {
+        if (k in muted) { delete muted[k]; wasMuted = true; }
+      }
       saveSettings(settings);
     }
-
-    await sock.sendMessage(chat, { text: `🔊 @${target.split("@")[0]} has been unmuted.`, mentions: [target] });
+    await sock.sendMessage(chat, { text: panel(TITLE, [wasMuted ? `🔊 ${groupOps.mentionText(target)} has been unmuted.` : `ℹ️ ${groupOps.mentionText(target)} was not muted.`]), mentions: [target] });
   }
 };

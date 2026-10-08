@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "newgc",
+  scope: "OWNER",
   aliases: ["creategroup"],
   description: "Create a new group (owner only). Usage: .newgc Group Name @user1 @user2",
   async execute(sock, m, args) {

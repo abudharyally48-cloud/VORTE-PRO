@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "getprivacy",
+  scope: "OWNER",
   aliases: ["privacy"],
   description: "Show the bot account's WhatsApp privacy settings (owner only)",
   async execute(sock, m, args) {

@@ -3,6 +3,7 @@ const axios = require("axios");
 
 module.exports = {
   name: "search",
+  scope: "BOTH",
   aliases: ["ddg"],
   description: "Search the web via DuckDuckGo",
   async execute(sock, m, args) {

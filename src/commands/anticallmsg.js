@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "anticallmsg",
+  scope: "OWNER",
   description: "Set the message sent to callers after anticall rejects their call (owner only)",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

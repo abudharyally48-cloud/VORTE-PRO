@@ -3,6 +3,7 @@ const axios = require("axios");
 
 module.exports = {
   name: "fact",
+  scope: "BOTH",
   description: "Get a random fact",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

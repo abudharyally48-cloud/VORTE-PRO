@@ -1,36 +1,17 @@
 // src/commands/poll.js
-const helpers = require("../utils/helpers");
+const { panel } = require("../utils/ui");
 
 module.exports = {
   name: "poll",
-  description: "Create a poll in the group",
+  scope: "GROUP",
+  admin: true,
+  description: "Create a poll in the group. Usage: .poll question|option1|option2|...",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
-    if (!helpers.isGroup(chat)) return sock.sendMessage(chat, { text: "❌ This command can only be used in groups." });
-
-    const sender = m.key.participant || m.key.remoteJid;
-    const body = args.join(" ");
-
-    if (!body) return sock.sendMessage(chat, { text: "Usage: .poll question|option1|option2|..." });
-
-    const [question, ...options] = body.split("|");
-    if (!question || options.length < 2) return sock.sendMessage(chat, { text: "❌ Provide a question and at least 2 options." });
-
-    try {
-      if (!(await helpers.isAdmin(sock, chat, sender)) && !helpers.isOwner(sender)) {
-        return sock.sendMessage(chat, { text: "❌ Only admins can use this command." });
-      }
-
-      await sock.sendMessage(chat, {
-        poll: {
-          name: question.trim(),
-          values: options.map(o => o.trim()),
-          selectableCount: 1
-        }
-      });
-    } catch (err) {
-      console.error(err);
-      await sock.sendMessage(chat, { text: "❌ Failed to create poll." });
-    }
-  },
+    const [question, ...rest] = args.join(" ").split("|").map((s) => s.trim());
+    const options = rest.filter(Boolean);
+    if (!question || options.length < 2) return sock.sendMessage(chat, { text: panel("👥 GROUP MANAGEMENT", ["Usage: .poll question|option1|option2|...", "(2–12 options)"]) });
+    if (options.length > 12) return sock.sendMessage(chat, { text: panel("👥 GROUP MANAGEMENT", ["❌ A WhatsApp poll can have at most 12 options."]) });
+    await sock.sendMessage(chat, { poll: { name: question, values: options, selectableCount: 1 } });
+  }
 };

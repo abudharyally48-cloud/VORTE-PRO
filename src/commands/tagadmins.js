@@ -1,38 +1,19 @@
 // src/commands/tagadmins.js
-const helpers = require("../utils/helpers");
+const identity = require("../utils/identity");
+const { panel } = require("../utils/ui");
 
 module.exports = {
   name: "tagadmins",
+  scope: "GROUP",
+  admin: true,
   description: "Mention all admins in the group with an optional message (Admin/Owner only)",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
-    const sender = m.key.participant || m.key.remoteJid;
-    if (!helpers.isGroup(chat)) {
-      return sock.sendMessage(chat, { text: "❌ This command only works in groups." });
-    }
-
-    const isOwner = helpers.isOwner(sender) || m.key?.fromMe;
-    const isAdmin = await helpers.isAdmin(sock, chat, sender);
-    if (!isOwner && !isAdmin) {
-      return sock.sendMessage(chat, { text: "❌ Only group admins or my owner can use this." });
-    }
-
-    try {
-      const metadata = await sock.groupMetadata(chat);
-      const admins = metadata.participants.filter(p => p.admin);
-      if (admins.length === 0) {
-        return sock.sendMessage(chat, { text: "ℹ️ No admins found in this group." });
-      }
-
-      const message = args.join(" ") || "📢 Attention admins!";
-      const mentionText = admins.map(a => `@${a.id.split("@")[0]}`).join(" ");
-
-      await sock.sendMessage(chat, {
-        text: `${message}\n\n${mentionText}`,
-        mentions: admins.map(a => a.id)
-      });
-    } catch (e) {
-      await sock.sendMessage(chat, { text: "❌ Could not tag admins." });
-    }
+    const meta = await identity.getMetadata(sock, chat);
+    const admins = (meta.participants || []).filter((p) => p.admin);
+    if (!admins.length) return sock.sendMessage(chat, { text: panel("👥 GROUP MANAGEMENT", ["ℹ️ No admins found in this group."]) });
+    const message = args.join(" ").trim() || "📢 Attention admins!";
+    const tags = admins.map((a) => `@${a.id.split("@")[0].split(":")[0]}`).join(" ");
+    await sock.sendMessage(chat, { text: `${message}\n\n${tags}`, mentions: admins.map((a) => a.id) });
   }
 };

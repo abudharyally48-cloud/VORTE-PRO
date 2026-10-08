@@ -4,6 +4,7 @@ const { downloadMediaMessage } = require("baileys");
 
 module.exports = {
   name: "botdp",
+  scope: "OWNER",
   description: "Reply to an image with .botdp to set it as the bot's profile picture (owner only)",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

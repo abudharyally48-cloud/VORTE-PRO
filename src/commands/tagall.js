@@ -1,29 +1,25 @@
-// src/commands/tagall.js
-const helpers = require("../utils/helpers");
+// src/commands/tagall.js — mention everyone (admin/owner only: anyone-can-ping-everyone is abuse).
+const identity = require("../utils/identity");
+const { panel } = require("../utils/ui");
+
+const CHUNK = 150; // keep each message comfortably small
 
 module.exports = {
-  name: 'tagall',
-  aliases: ['everyone'],
-  description: 'Tag everyone in the group',
+  name: "tagall",
+  aliases: ["everyone"],
+  scope: "GROUP",
+  admin: true,
+  description: "Tag everyone in the group (admins only). Usage: .tagall [message]",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
-    if (!helpers.isGroup(chat)) return sock.sendMessage(chat, { text: "❌ This command can only be used in groups." });
-
-    try {
-      const metadata = await sock.groupMetadata(chat);
-      const members = metadata.participants.map(u => u.id);
-      
-      let textTag = "📣 *Tagging Everyone*\n\n";
-      members.forEach(u => {
-        textTag += `@${u.split("@")[0]}\n`;
-      });
-
-      await sock.sendMessage(chat, { 
-        text: textTag, 
-        mentions: members 
-      });
-    } catch (e) {
-      await sock.sendMessage(chat, { text: "❌ Failed to tag everyone." });
+    const meta = await identity.getMetadata(sock, chat);
+    const members = (meta.participants || []).map((p) => p.id);
+    const note = args.join(" ").trim();
+    for (let i = 0; i < members.length; i += CHUNK) {
+      const part = members.slice(i, i + CHUNK);
+      const lines = part.map((j) => `@${j.split("@")[0].split(":")[0]}`).join("\n");
+      const head = i === 0 ? `📣 *Tagging Everyone*${note ? `\n${note}` : ""}\n\n` : "";
+      await sock.sendMessage(chat, { text: head + lines, mentions: part });
     }
   }
 };

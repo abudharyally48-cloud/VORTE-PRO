@@ -3,6 +3,7 @@ const os = require("os");
 
 module.exports = {
   name: "system",
+  scope: "BOTH",
   description: "Get system information",
   async execute(sock, m) {
     const chat = m.key.remoteJid;

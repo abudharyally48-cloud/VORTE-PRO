@@ -6,6 +6,7 @@ const providers = require("../services/providers");
 
 module.exports = {
   name: "tiktokstatus",
+  scope: "BOTH",
   description: "Check the official TikTok API OAuth credentials (separate from .tiktok, which downloads videos)",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

@@ -1,6 +1,7 @@
 // src/commands/ping3.js
 module.exports = {
   name: "ping3",
+  scope: "BOTH",
   description: "Alternative ping command (edit version)",
   async execute(sock, m) {
     const chat = m.key.remoteJid;

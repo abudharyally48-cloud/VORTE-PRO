@@ -4,6 +4,7 @@ const sudoStore = require("../utils/sudoStore");
 
 module.exports = {
   name: "listsudo",
+  scope: "OWNER",
   description: "List sudo users (owner only)",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

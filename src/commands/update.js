@@ -4,6 +4,7 @@ const { exec } = require("child_process");
 
 module.exports = {
   name: "update",
+  scope: "OWNER",
   description: "Pull the latest updates from Git (Owner only)",
   async execute(sock, m) {
     const chat = m.key.remoteJid;

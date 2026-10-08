@@ -7,6 +7,7 @@ const toolCommands = ["math", "echo", "say", "reverse", "countchars", "vv", "tov
 
 module.exports = {
   name: "tools",
+  scope: "BOTH",
   aliases: toolCommands,
   description: "Various utility tools",
   async execute(sock, m, args) {

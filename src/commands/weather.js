@@ -3,6 +3,7 @@ const axios = require("axios");
 
 module.exports = {
   name: "weather",
+  scope: "BOTH",
   description: "Get current weather for a city",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

@@ -4,6 +4,7 @@ const config = require("../config/config");
 
 module.exports = {
   name: "prefix",
+  scope: "OWNER",
   description: "Set an additional custom prefix on top of the defaults (owner only)",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

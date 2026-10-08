@@ -4,6 +4,7 @@ const gameService = require("../services/gameService");
 
 module.exports = {
   name: "quiz",
+  scope: "BOTH",
   aliases: ["quizstart", "quizanswer"],
   description: "Play a quick quiz",
   async execute(sock, m, args) {

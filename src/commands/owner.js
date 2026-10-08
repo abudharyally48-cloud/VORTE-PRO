@@ -3,6 +3,7 @@ const config = require("../config/config");
 
 module.exports = {
   name: 'owner',
+  scope: "BOTH",
   description: 'Show bot owner info',
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

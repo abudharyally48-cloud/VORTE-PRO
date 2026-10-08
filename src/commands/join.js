@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "join",
+  scope: "OWNER",
   description: "Make the bot join a group via invite link (owner only). Usage: .join https://chat.whatsapp.com/XXXX",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

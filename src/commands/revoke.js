@@ -1,19 +1,24 @@
-// src/commands/revoke.js
-const { guardGroupAdmin } = require("../utils/guards");
+// src/commands/revoke.js — reset the invite link (the old link stops working).
+const groupOps = require("../utils/groupOps");
+const { panel } = require("../utils/ui");
+
+const TITLE = "👥 GROUP MANAGEMENT";
 
 module.exports = {
   name: "revoke",
   aliases: ["resetlink"],
+  scope: "GROUP",
+  admin: true,
+  botAdmin: true,
   description: "Reset (revoke) the group invite link (admin only)",
   async execute(sock, m) {
     const chat = m.key.remoteJid;
-    if (!(await guardGroupAdmin(sock, m, { botAdmin: true }))) return;
     try {
       const code = await sock.groupRevokeInvite(chat);
-      await sock.sendMessage(chat, { text: `✅ Invite link reset. New link:\nhttps://chat.whatsapp.com/${code}` });
+      if (!code) throw new Error("WhatsApp returned no link");
+      await sock.sendMessage(chat, { text: panel(TITLE, ["✅ Invite link reset. The old link no longer works.", `New link: https://chat.whatsapp.com/${code}`]) });
     } catch (err) {
-      console.error("❌ revoke error:", err.message);
-      await sock.sendMessage(chat, { text: "❌ Couldn't reset the invite link." });
+      await sock.sendMessage(chat, { text: panel(TITLE, [`❌ I couldn't reset the link: ${groupOps.errorReason(err)}.`]) });
     }
   }
 };

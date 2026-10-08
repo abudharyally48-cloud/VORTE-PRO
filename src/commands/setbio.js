@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "setbio",
+  scope: "OWNER",
   aliases: ["updatebio","description"],
   description: "Update the bot profile bio (Owner only)",
   async execute(sock, m, args) {

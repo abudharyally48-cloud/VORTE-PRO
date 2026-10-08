@@ -3,6 +3,7 @@ const QRCode = require("qrcode");
 
 module.exports = {
   name: "qr",
+  scope: "BOTH",
   description: "Generate a QR code from text",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

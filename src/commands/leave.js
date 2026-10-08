@@ -3,6 +3,8 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "leave",
+  scope: "GROUP",
+  owner: true,
   description: "Make the bot leave the current group (Owner only)",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

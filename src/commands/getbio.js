@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "getbio",
+  scope: "BOTH",
   description: "Get a user's WhatsApp About/bio. Usage: .getbio @user (or reply, or no args for yourself)",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

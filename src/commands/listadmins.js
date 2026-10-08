@@ -1,33 +1,18 @@
 // src/commands/listadmins.js
-const helpers = require("../utils/helpers");
+const identity = require("../utils/identity");
+const { panel } = require("../utils/ui");
 
 module.exports = {
   name: "listadmins",
   aliases: ["admins"],
+  scope: "GROUP",
   description: "List all admins in the group",
-  async execute(sock, m, args) {
+  async execute(sock, m) {
     const chat = m.key.remoteJid;
-    if (!helpers.isGroup(chat)) {
-      return sock.sendMessage(chat, { text: "❌ This command only works in groups." });
-    }
-
-    try {
-      const metadata = await sock.groupMetadata(chat);
-      const admins = metadata.participants.filter(p => p.admin);
-      if (admins.length === 0) {
-        return sock.sendMessage(chat, { text: "ℹ️ No admins found in this group." });
-      }
-
-      const list = admins
-        .map((a, i) => `${i + 1}. @${a.id.split("@")[0]}${a.admin === "superadmin" ? " (owner)" : ""}`)
-        .join("\n");
-
-      await sock.sendMessage(chat, {
-        text: `👮 *Group Admins*\n\n${list}`,
-        mentions: admins.map(a => a.id)
-      });
-    } catch (e) {
-      await sock.sendMessage(chat, { text: "❌ Could not fetch group admins." });
-    }
+    const meta = await identity.getMetadata(sock, chat);
+    const admins = (meta.participants || []).filter((p) => p.admin);
+    if (!admins.length) return sock.sendMessage(chat, { text: panel("👥 GROUP ADMINS", ["ℹ️ No admins found in this group."]) });
+    const list = admins.map((a, i) => `${i + 1}. @${a.id.split("@")[0].split(":")[0]}${a.admin === "superadmin" ? " (creator)" : ""}`);
+    await sock.sendMessage(chat, { text: panel(`👮 GROUP ADMINS (${admins.length})`, list), mentions: admins.map((a) => a.id) });
   }
 };

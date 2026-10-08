@@ -5,6 +5,7 @@ const rateLimiter = require("../utils/imageRateLimiter");
 
 module.exports = {
   name: "image",
+  scope: "BOTH",
   aliases: ["imagine"],
   description: "Generate an image from a text prompt (30 per 5 hours, per user)",
   async execute(sock, m, args) {

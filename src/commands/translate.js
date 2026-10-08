@@ -8,6 +8,7 @@ const LIBRETRANSLATE_URL = "https://translate.astian.org/translate";
 
 module.exports = {
   name: "translate",
+  scope: "BOTH",
   aliases: ["tr"],
   description: "Translate text. Usage: .translate <lang_code> <text>  (e.g. .translate es Hello there)",
   async execute(sock, m, args) {

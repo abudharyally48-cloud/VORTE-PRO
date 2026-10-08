@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "ownername",
+  scope: "OWNER",
   description: "Set the owner name shown in the menu (owner only)",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

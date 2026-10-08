@@ -4,6 +4,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "groupsprivacy",
+  scope: "OWNER",
   description: "Set who can add the bot account to groups (owner only). Usage: .groupsprivacy all | contacts | contact_blacklist",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

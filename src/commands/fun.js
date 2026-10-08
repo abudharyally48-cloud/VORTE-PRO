@@ -5,6 +5,7 @@ const funCommands = ["joke", "quote", "truth", "dare", "dice", "coin", "guess", 
 
 module.exports = {
   name: "fun",
+  scope: "BOTH",
   aliases: funCommands,
   description: "Fun and entertainment commands",
   async execute(sock, m, args) {

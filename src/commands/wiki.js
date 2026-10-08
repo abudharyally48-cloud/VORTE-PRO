@@ -3,6 +3,7 @@ const axios = require("axios");
 
 module.exports = {
   name: "wiki",
+  scope: "BOTH",
   aliases: ["wikipedia"],
   description: "Get a Wikipedia summary",
   async execute(sock, m, args) {

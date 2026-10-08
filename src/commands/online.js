@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "online",
+  scope: "OWNER",
   aliases: ["setonline"],
   description: "Keep the bot's WhatsApp presence set to 'online' (owner only)",
   async execute(sock, m, args, getSettings, saveSettings) {

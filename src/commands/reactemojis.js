@@ -3,6 +3,8 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "reactemojis",
+  scope: "GROUP",
+  admin: true,
   description: "Set the emojis used by autoreact in this chat. Usage: .reactemojis 😂,🔥,👍  (or .reactemojis reset)",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

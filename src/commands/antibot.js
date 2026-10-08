@@ -3,31 +3,45 @@
 // (WhatsApp offers no way to automatically detect bots, so detection is manual —
 // see .antibothelp.) Serves: .antibot .botlist .kickbot .antibothelp
 const helpers = require("../utils/helpers");
-const { guardGroupAdmin } = require("../utils/guards");
+const identity = require("../utils/identity");
+const groupOps = require("../utils/groupOps");
+const antiActions = require("../utils/antiActions");
+const { panel } = require("../utils/ui");
 
 module.exports = {
   name: "antibot",
+  scope: "GROUP",
+  admin: true,
+  scopes: { antibothelp: { scope: "BOTH", admin: false }, kickbot: { botAdmin: true } },
   aliases: ["botlist", "kickbot", "antibothelp"],
-  description: "Flag & remove known bot accounts in a group: .antibot on/off | add/remove/list <n> | .botlist | .kickbot | .antibothelp",
+  description: "Flag known bot accounts and act on them: .antibot on/off/warn/delete/remove | add/unflag/list <n> | .botlist | .kickbot | .antibothelp",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;
     const cmd = helpers.getBody(m).slice(1).split(/\s+/)[0].toLowerCase();
 
     if (cmd === "antibothelp") {
       return sock.sendMessage(chat, {
-        text:
-          "🤖 *Anti-Bot help*\n\n" +
-          "WhatsApp doesn't tell us which accounts are bots, so *you* flag them and I enforce it:\n\n" +
-          "• .antibot add <number|@user> — flag a number as a bot in this group\n" +
-          "• .antibot remove <number|@user> — unflag\n" +
-          "• .antibot list  (or .botlist) — show flagged bots\n" +
-          "• .antibot on/off — auto-remove flagged bots when they join or speak\n" +
-          "• .kickbot — remove every flagged bot currently in the group\n\n" +
-          "I must be a group admin to remove anyone."
+        text: panel("🤖 ANTIBOT HELP", [
+          "WhatsApp doesn't tell us which accounts are bots, so YOU flag them and I enforce it:",
+          "",
+          "• .antibot add <number|@user> — flag a number as a bot in this group",
+          "• .antibot unflag <number|@user> — unflag (.antibot remove <number> also works)",
+          "• .antibot list (or .botlist) — show flagged bots",
+          "• .antibot on / off — turn enforcement on or off",
+          "• .antibot warn | delete | remove — choose what happens when a flagged bot speaks",
+          "     warn = delete + warning (3rd warning removes) · delete = delete only · remove = delete + remove",
+          "• .kickbot — remove every flagged bot currently in the group",
+          "",
+          "I must be a group admin to delete messages or remove anyone."
+        ])
       });
     }
 
-    if (!(await guardGroupAdmin(sock, m, { botAdmin: cmd === "kickbot" }))) return;
+    if (cmd === "antibot" && !args.length) {
+      const st = getSettings();
+      const c = antiActions.getConfig(st, chat, "antibot");
+      return sock.sendMessage(chat, { text: antiActions.describe("antibot", c) + `\nFlagged bots: ${(st[chat]?.knownBots || []).length}\n\nUsage: .antibot on|off|warn|delete|remove|add|unflag|list` });
+    }
 
     const settings = getSettings();
     if (!settings[chat]) settings[chat] = {};
@@ -43,40 +57,44 @@ module.exports = {
     }
 
     if (cmd === "kickbot") {
-      const md = await sock.groupMetadata(chat);
-      const botNum = helpers.normalizeJid(sock.user?.id);
+      const md = await identity.getMetadata(sock, chat, { force: true });
+      const botKeys = new Set(identity.botKeys(sock));
       const targets = md.participants
-        .filter(p => !p.admin)
-        .map(p => p.id || p.jid)
-        .filter(j => j && cs.knownBots.includes(helpers.normalizeJid(j)) && helpers.normalizeJid(j) !== botNum);
+        .filter((p) => !p.admin)
+        .filter((p) => !identity.participantKeys(p).some((k) => botKeys.has(k)))
+        .filter((p) => cs.knownBots.some((n) => identity.participantKeys(p).includes(`pn:${n}`) || identity.participantKeys(p).includes(`lid:${n}`)))
+        .map((p) => p.id);
       if (!targets.length) return sock.sendMessage(chat, { text: "ℹ️ No flagged bots (that I can remove) are in this group right now." });
-      try {
-        await sock.groupParticipantsUpdate(chat, targets, "remove");
-        return sock.sendMessage(chat, { text: `✅ Removed ${targets.length} flagged bot(s).` });
-      } catch (err) {
-        console.error("❌ kickbot error:", err.message);
-        return sock.sendMessage(chat, { text: "❌ Couldn't remove them." });
-      }
+      const res = await groupOps.participantAction(sock, chat, targets, "remove");
+      const lines = [];
+      if (res.ok.length) lines.push(`✅ Removed ${res.ok.length} flagged bot(s).`);
+      for (const f of res.failed) lines.push(`⚠️ ${groupOps.mentionText(f.jid)}: ${f.reason}`);
+      return sock.sendMessage(chat, { text: lines.join("\n"), mentions: targets });
     }
 
-    // .antibot <on|off|add|remove> ...
+    // .antibot <on|off|warn|delete|remove|add|unflag> ...
     const sub = args[0]?.toLowerCase();
-    if (sub === "on" || sub === "off") {
-      cs.antibot = sub === "on";
+    const isFlagTarget = sub === "remove" && args.length > 1; // ".antibot remove <number>" keeps its old meaning: unflag
+    if (["on", "off", "warn", "delete"].includes(sub) || (sub === "remove" && !isFlagTarget)) {
+      const next = antiActions.applyArg(settings, chat, "antibot", sub);
       saveSettings(settings);
-      return sock.sendMessage(chat, { text: `✅ Anti-bot auto-removal turned ${sub}.` });
+      let text = antiActions.describe("antibot", next) + `\nFlagged bots: ${cs.knownBots.length}`;
+      if (next.enabled && !(await helpers.isBotAdmin(sock, chat))) text += "\n\n⚠️ I need to be a group admin to perform this action. Make me an admin so AntiBot can enforce.";
+      return sock.sendMessage(chat, { text });
     }
-    if (sub === "add" || sub === "remove") {
+    if (sub === "add" || sub === "unflag" || isFlagTarget) {
       const ctx = m.message?.extendedTextMessage?.contextInfo;
-      const number = helpers.normalizeJid(ctx?.mentionedJid?.[0] || ctx?.participant || args[1] || "");
-      if (number.length < 7 || number.length > 15) return sock.sendMessage(chat, { text: `Usage: .antibot ${sub} <number>  (or @mention / reply)` });
-      if (helpers.isTrueOwner(number + "@s.whatsapp.net")) return sock.sendMessage(chat, { text: "❌ Can't flag the bot's owner." });
-      if (sub === "add") { if (!cs.knownBots.includes(number)) cs.knownBots.push(number); }
-      else cs.knownBots = cs.knownBots.filter(n => n !== number);
+      const arg = isFlagTarget ? args[1] : args[1];
+      const number = helpers.normalizeJid(ctx?.mentionedJid?.[0] || ctx?.participant || arg || "");
+      const pn = identity.toPn(ctx?.mentionedJid?.[0] || ctx?.participant || "") || number;
+      if (pn.length < 7 || pn.length > 15) return sock.sendMessage(chat, { text: `Usage: .antibot ${sub === "add" ? "add" : "unflag"} <number>  (or @mention / reply)` });
+      if (helpers.isTrueOwner(pn + "@s.whatsapp.net")) return sock.sendMessage(chat, { text: "❌ Can't flag the bot's owner." });
+      if (sub === "add") { if (!cs.knownBots.includes(pn)) cs.knownBots.push(pn); }
+      else cs.knownBots = cs.knownBots.filter((n) => n !== pn && n !== number);
       saveSettings(settings);
-      return sock.sendMessage(chat, { text: `✅ +${number} ${sub === "add" ? "flagged as a bot" : "unflagged"}.` });
+      return sock.sendMessage(chat, { text: `✅ +${pn} ${sub === "add" ? "flagged as a bot" : "unflagged"}.` });
     }
 
-    return sock.sendMessage(chat, { text: "Usage: .antibot on/off | add/remove/list <number> — see .antibothelp" });
+    return sock.sendMessage(chat, { text: "Usage: .antibot on|off|warn|delete|remove | add|unflag|list <number> — see .antibothelp" });
   }
 };

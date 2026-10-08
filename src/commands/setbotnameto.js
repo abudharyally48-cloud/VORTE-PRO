@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "setbotnameto",
+  scope: "OWNER",
   description: "Set the custom bot name shown in menu style 4 (owner only)",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

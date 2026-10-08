@@ -3,6 +3,7 @@ const axios = require("axios");
 
 module.exports = {
   name: "define",
+  scope: "BOTH",
   aliases: ["dictionary"],
   description: "Look up a word's definition",
   async execute(sock, m, args) {

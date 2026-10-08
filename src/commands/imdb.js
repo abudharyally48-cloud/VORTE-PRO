@@ -9,6 +9,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: 'imdb',
+  scope: "BOTH",
   aliases: ['movie', 'tmdb'],
   description: 'Look up a movie/show: rating, release year, where to watch',
   async execute(sock, m, args) {

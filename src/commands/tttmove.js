@@ -4,6 +4,7 @@ const gameService = require("../services/gameService");
 
 module.exports = {
   name: "tttmove",
+  scope: "BOTH",
   description: "Make a move in Tic-Tac-Toe",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

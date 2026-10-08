@@ -3,6 +3,7 @@ const os = require("os");
 
 module.exports = {
   name: "status",
+  scope: "BOTH",
   description: "Get bot status and resource usage",
   async execute(sock, m) {
     const chat = m.key.remoteJid;

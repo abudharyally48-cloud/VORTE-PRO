@@ -4,6 +4,7 @@ const gameService = require("../services/gameService");
 
 module.exports = {
   name: "tictactoe",
+  scope: "BOTH",
   aliases: ["ttt"],
   description: "Challenge a user to Tic-Tac-Toe",
   async execute(sock, m, args) {

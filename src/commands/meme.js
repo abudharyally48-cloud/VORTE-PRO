@@ -3,6 +3,7 @@ const axios = require("axios");
 
 module.exports = {
   name: "meme",
+  scope: "BOTH",
   description: "Get a random meme",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "anticall",
+  scope: "OWNER",
   description: "Toggle automatic rejection of incoming WhatsApp calls (owner only)",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

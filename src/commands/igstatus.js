@@ -6,6 +6,7 @@ const providers = require("../services/providers");
 
 module.exports = {
   name: "igstatus",
+  scope: "BOTH",
   description: "Check the official Instagram Graph API credentials (separate from .ig, which downloads reels/posts)",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

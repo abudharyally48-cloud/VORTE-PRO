@@ -4,6 +4,7 @@ const chatStore = require("../utils/chatStore");
 
 module.exports = {
   name: "broadcast",
+  scope: "OWNER",
   description: "Broadcast a message to every known chat (owner only)",
   async execute(sock, m, args, getSettings) {
     const chat = m.key.remoteJid;

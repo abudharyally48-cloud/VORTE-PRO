@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "restart",
+  scope: "OWNER",
   description: "Restart the bot (Owner only)",
   async execute(sock, m) {
     const chat = m.key.remoteJid;

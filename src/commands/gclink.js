@@ -1,20 +1,23 @@
-// src/commands/gclink.js
-const helpers = require("../utils/helpers");
+// src/commands/gclink.js — also reachable as .link
+const groupOps = require("../utils/groupOps");
+const { panel } = require("../utils/ui");
+
+const TITLE = "👥 GROUP MANAGEMENT";
 
 module.exports = {
-  name: 'gclink',
+  name: "gclink",
   aliases: ["link"],
-  description: 'Get group invite link',
-  async execute(sock, m, args) {
+  scope: "GROUP",
+  botAdmin: true,
+  description: "Get the group invite link",
+  async execute(sock, m) {
     const chat = m.key.remoteJid;
-    if (!helpers.isGroup(chat)) return sock.sendMessage(chat, { text: "❌ Group only command." });
-
     try {
-      const res = await sock.groupInviteCode(chat);
-      const link = `https://chat.whatsapp.com/${res}`;
-      await sock.sendMessage(chat, { text: `🔗 Group Link: ${link}` });
+      const code = await sock.groupInviteCode(chat);
+      if (!code) throw new Error("WhatsApp returned no link");
+      await sock.sendMessage(chat, { text: panel(TITLE, [`🔗 Group link: https://chat.whatsapp.com/${code}`]) });
     } catch (err) {
-      await sock.sendMessage(chat, { text: "❌ Failed to fetch group link. Make sure the bot is an admin." });
+      await sock.sendMessage(chat, { text: panel(TITLE, [`❌ I couldn't get the link: ${groupOps.errorReason(err)}.`]) });
     }
   }
 };

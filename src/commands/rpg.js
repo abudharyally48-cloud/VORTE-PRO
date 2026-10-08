@@ -6,6 +6,7 @@ const COOLDOWN_MS = 60 * 1000; // 1 minute between actions, to keep it from bein
 
 module.exports = {
   name: "rpg",
+  scope: "BOTH",
   description: "RPG mini-game — .rpg, .rpg work, .rpg hunt, .rpg heal, .rpg inventory",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

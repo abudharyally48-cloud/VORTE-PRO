@@ -4,6 +4,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "blacklist",
+  scope: "OWNER",
   aliases: ["ban", "unban", "banlist"],
   description: "Block/unblock a number from using the bot (owner only). .blacklist add/remove/list <n> | .ban <n> | .unban <n> | .banlist",
   async execute(sock, m, args, getSettings, saveSettings) {

@@ -1,6 +1,7 @@
 // src/commands/wyr.js
 module.exports = {
   name: "wyr",
+  scope: "BOTH",
   aliases: ["wouldyourather"],
   description: "Get a random 'would you rather' prompt",
   async execute(sock, m, args) {

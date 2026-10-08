@@ -1,6 +1,7 @@
 // src/commands/ship.js
 module.exports = {
   name: "ship",
+  scope: "BOTH",
   description: "Ship two people for a fun compatibility %. Usage: .ship @user1 @user2",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

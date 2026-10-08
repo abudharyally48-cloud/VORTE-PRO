@@ -1,6 +1,7 @@
 // src/commands/runtime.js
 module.exports = {
   name: "runtime",
+  scope: "BOTH",
   aliases: ["uptime"],
   description: "Get bot runtime",
   async execute(sock, m) {

@@ -1,6 +1,7 @@
 // src/commands/8ball.js
 module.exports = {
   name: "8ball",
+  scope: "BOTH",
   description: "Ask the magic 8-ball a question",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

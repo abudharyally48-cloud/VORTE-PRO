@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "safemode",
+  scope: "OWNER",
   description: "Toggle human-like pacing/delays to reduce the risk of WhatsApp flagging the bot as spam (owner only)",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

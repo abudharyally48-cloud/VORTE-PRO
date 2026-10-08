@@ -4,6 +4,8 @@ const { guardGroupAdmin } = require("../utils/guards");
 
 module.exports = {
   name: "delete",
+  scope: "GROUP",
+  admin: true,
   aliases: ["del"],
   description: "Reply to a message with .delete to remove it (admin only)",
   async execute(sock, m) {

@@ -3,6 +3,7 @@ const axios = require("axios");
 
 module.exports = {
   name: "shorten",
+  scope: "BOTH",
   aliases: ["short"],
   description: "Shorten a URL",
   async execute(sock, m, args) {

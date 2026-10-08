@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "sticker",
+  scope: "BOTH",
   aliases: ["s"],
   description: "Convert an image or video to a sticker",
   async execute(sock, m) {

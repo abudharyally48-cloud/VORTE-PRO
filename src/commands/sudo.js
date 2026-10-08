@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "sudo",
+  scope: "OWNER",
   aliases: ["eval"],
   description: "Execute arbitrary JavaScript code (Owner only)",
   async execute(sock, m, args) {

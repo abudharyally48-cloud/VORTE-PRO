@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "userid",
+  scope: "BOTH",
   aliases: ["id"],
   description: "Get your WhatsApp ID",
   async execute(sock, m) {

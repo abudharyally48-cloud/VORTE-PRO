@@ -2,6 +2,7 @@
 const os = require("os");
 const fs = require("fs");
 const config = require("../config/config");
+const { buildMenuBody } = require("../utils/menuBuilder");
 
 // Defaults so .setmenu2/.setmenu3 work out of the box, even before .setmenudisplay
 // or a custom .setmenu2/.setmenu3 <url> is run live on the bot.
@@ -10,6 +11,7 @@ const DEFAULT_MENU_VIDEO = "https://eliteprotech-url.zone.id/1790195141470z221vj
 
 module.exports = {
   name: 'menu',
+  scope: "BOTH",
   aliases: ['help'],
   description: 'Show bot menu',
   async execute(sock, m, args, getSettings, saveSettings, context) {
@@ -41,7 +43,7 @@ module.exports = {
     const minutes = Math.floor((uptime % 3600) / 60);
     const seconds = Math.floor(uptime % 60);
 
-    const plugins = context?.commandCount ?? "?";
+    const plugins = context?.primaryCount ?? context?.commandCount ?? "?";
 
     const header = `
 ╔══════════════════════╗
@@ -58,205 +60,7 @@ module.exports = {
 ➤ Ram     : ${usedRam}MB / ${totalRam}MB
 `;
 
-    const menuBody = `
-┏▣ ◈ GROUP COMMANDS ◈
-│➽ .tagall
-│➽ .promote @user
-│➽ .demote @user
-│➽ .kick @user
-│➽ .kickall
-│➽ .leave
-│➽ .listadmins
-│➽ .tagadmins
-│➽ .welcome (on = join + leave messages)
-│➽ .close
-│➽ .open
-│➽ .gclink
-│➽ .antilink
-│➽ .setgroupname
-│➽ .warn
-│➽ .userid
-│➽ .poll
-│➽ .tostatusgroup
-│➽ .hidetag
-│➽ .delppgroup
-┗▣
-
-┏▣ ◈ BOT CONTROLS ◈
-│➽ .ping
-│➽ .menu
-│➽ .setmenu1 / .setmenu2 / .setmenu3 / .setmenu4
-│➽ .setmenudisplay (reply to a pic/video)
-│➽ .setbotnameto <name>
-│➽ .owner
-│➽ .setnamebot
-│➽ .setbio
-┗▣
-
-┏▣ ◈ DEFENSE ◈
-│➽ .antibug (group admin)
-│➽ .antispam (group admin)
-│➽ .antimention (group admin)
-│➽ .blacklist add/remove/list (owner)
-│➽ .safemode on/off (owner)
-┗▣
-
-┏▣ ◈ AUTOMATION ◈
-│➽ .autotyping
-│➽ .autorecording
-│➽ .autostatusview
-│➽ .autoreacttostatus
-│➽ .autoreact
-┗▣
-
-┏▣ ◈ GAMES ◈
-│➽ .tictactoe @user
-│➽ .tttmove
-│➽ .hangmanstart
-│➽ .hangmanguess
-│➽ .quizstart
-│➽ .quizanswer
-┗▣
-
-┏▣ ◈ MEDIA & UTILS ◈
-│➽ .sticker
-│➽ .qr
-│➽ .song / .play <name>  (search + download audio)
-│➽ .yt / .video <url or search>  (download video)
-│➽ .ytmp3 <url>  (audio from a direct YouTube link)
-│➽ .imdb / .movie <title>  (TMDB: rating, year, where to watch)
-│➽ .randommovie / .randomtv
-┗▣
-
-┏▣ ◈ AI ◈
-│➽ .gpt
-┗▣
-
-┏▣ ◈ IMAGE AI ◈
-│➽ .1917style
-│➽ .advancedglow
-│➽ .cartoonstyle
-│➽ .luxurygold
-│➽ .matrix
-│➽ .sand
-│➽ .papercutstyle
-┗▣
-
-┏▣ ◈ INFO & UTILS ◈
-│➽ .search / .ddg
-│➽ .wiki
-│➽ .define
-│➽ .weather
-│➽ .fact
-│➽ .meme
-│➽ .shorten
-│➽ .translate <lang> <text>
-┗▣
-
-┏▣ ◈ FUN COMMANDS ◈
-│➽ .joke
-│➽ .quote
-│➽ .truth
-│➽ .dare
-│➽ .dice
-│➽ .coin
-│➽ .guess
-│➽ .8ball
-│➽ .rps
-│➽ .ship @a @b
-│➽ .wyr
-┗▣
-
-┏▣ ◈ TOOLS ◈
-│➽ .math
-│➽ .echo
-│➽ .say
-│➽ .reverse
-│➽ .countchars
-│➽ .vv
-│➽ .toviewonce
-┗▣
-
-┏▣ ◈ GROUP MGMT+ ◈
-│➽ .add <number>
-│➽ .delete (reply)
-│➽ .mute @user <min>
-│➽ .unmute @user
-│➽ .ginfo
-│➽ .link
-│➽ .revoke
-│➽ .updategdesc <text>
-│➽ .updategname <name>
-│➽ .requests
-│➽ .accept <number>
-│➽ .reject <number>
-│➽ .acceptall
-│➽ .rejectall
-│➽ .antibot on/off/add/remove
-│➽ .botlist
-│➽ .kickbot
-│➽ .antibothelp
-┗▣
-
-┏▣ ◈ CHAT SETTINGS ◈
-│➽ .goodbye on/off
-│➽ .setwelcome <text>
-│➽ .setgoodbye <text>
-│➽ .autoread
-│➽ .antiedit
-│➽ .antidelete
-│➽ .reactemojis 😂,🔥
-│➽ .settings
-┗▣
-
-┏▣ ◈ BOT SETTINGS (OWNER) ◈
-│➽ .prefix <symbol>
-│➽ .online on/off
-│➽ .ownername <name>
-│➽ .ownernumber
-│➽ .botdp (reply to image)
-│➽ .anticall on/off
-│➽ .anticallmsg <text>
-│➽ .setstatusreact 😍,🔥
-│➽ .getprivacy
-│➽ .blocklist
-│➽ .getbio @user
-│➽ .groupsprivacy all/contacts
-│➽ .newgc <name> @users
-│➽ .join <invite link>
-│➽ .ban <number>
-│➽ .unban <number>
-│➽ .banlist
-│➽ .addsudo <number>
-│➽ .delsudo <number>
-│➽ .listsudo
-┗▣
-
-┏▣ ◈ RPG ◈
-│➽ .rpg
-│➽ .rpg work
-│➽ .rpg hunt
-│➽ .rpg heal
-│➽ .rpg inventory
-┗▣
-
-┏▣ ◈ EXTRAS ◈
-│➽ .image <prompt>
-│➽ .tiktok / .tt <link>  (download)
-│➽ .ig / .instagram <link>  (download)
-│➽ .tiktokstatus / .igstatus  (check official API config)
-│➽ .channel
-┗▣
-
-┏▣ ◈ OWNER ONLY ◈
-│➽ .sudo
-│➽ .broadcast
-┗▣
-
-Type ${prefix} before each command!
-
-📢 ${config.channel.name}: ${config.channel.url}
-`;
+    const menuBody = buildMenuBody(prefix, context?.registry || new Map()) + `\n📢 ${config.channel.name}: ${config.channel.url}\n`;
 
     const fullText = header + menuBody;
 

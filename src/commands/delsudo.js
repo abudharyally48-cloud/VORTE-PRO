@@ -4,6 +4,7 @@ const sudoStore = require("../utils/sudoStore");
 
 module.exports = {
   name: "delsudo",
+  scope: "OWNER",
   description: "Remove a number's sudo access (TRUE owner only). Usage: .delsudo @user  or  .delsudo 2557...",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

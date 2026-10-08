@@ -4,6 +4,7 @@ const config = require("../config/config");
 
 module.exports = {
   name: "randommovie",
+  scope: "BOTH",
   aliases: ["randomtv"],
   description: "Get a random movie (or TV show via .randomtv), optionally filtered by genre",
   async execute(sock, m, args) {

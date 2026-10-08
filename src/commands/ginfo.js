@@ -1,29 +1,26 @@
 // src/commands/ginfo.js
-const helpers = require("../utils/helpers");
+const identity = require("../utils/identity");
+const { panel } = require("../utils/ui");
 
 module.exports = {
   name: "ginfo",
   aliases: ["groupinfo"],
+  scope: "GROUP",
   description: "Show information about this group",
   async execute(sock, m) {
     const chat = m.key.remoteJid;
-    if (!helpers.isGroup(chat)) return sock.sendMessage(chat, { text: "❌ This command is for groups only." });
-    try {
-      const md = await sock.groupMetadata(chat);
-      const admins = md.participants.filter(p => p.admin);
-      const created = md.creation ? new Date(md.creation * 1000).toDateString() : "unknown";
-      const text =
-        `👥 *${md.subject}*\n\n` +
-        `📝 Description: ${md.desc || "(none)"}\n` +
-        `👤 Members: ${md.participants.length}\n` +
-        `👮 Admins: ${admins.length}\n` +
-        `📅 Created: ${created}\n` +
-        `🔒 Messages: ${md.announce ? "admins only" : "everyone"}\n` +
-        `⚙️ Edit info: ${md.restrict ? "admins only" : "everyone"}`;
-      await sock.sendMessage(chat, { text });
-    } catch (err) {
-      console.error("❌ ginfo error:", err.message);
-      await sock.sendMessage(chat, { text: "❌ Couldn't fetch group info." });
-    }
+    const md = await identity.getMetadata(sock, chat, { force: true }); // always fresh
+    const admins = md.participants.filter((p) => p.admin);
+    const created = md.creation ? new Date(md.creation * 1000).toDateString() : "unknown";
+    await sock.sendMessage(chat, {
+      text: panel(`👥 ${md.subject}`, [
+        `📝 Description: ${md.desc || "(none)"}`,
+        `👤 Members: ${md.participants.length}`,
+        `👮 Admins: ${admins.length}`,
+        `📅 Created: ${created}`,
+        `🔒 Messages: ${md.announce ? "admins only" : "everyone"}`,
+        `⚙️ Edit info: ${md.restrict ? "admins only" : "everyone"}`
+      ])
+    });
   }
 };

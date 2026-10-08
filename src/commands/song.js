@@ -1,34 +1,24 @@
 // src/commands/song.js
-const fs = require("fs");
 const downloaders = require("../services/downloaders");
-
-const SEND_MAX_BYTES = (Number(process.env.YTDLP_SEND_MAX_MB) || 100) * 1024 * 1024;
+const { runDownload, readFile } = require("../utils/downloadUx");
+const { panel } = require("../utils/ui");
 
 module.exports = {
   name: "song",
+  scope: "BOTH",
   aliases: ["play", "music"],
   description: "Search and download a song by name. Usage: .song <song name>",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
     const query = args.join(" ").trim();
-    if (!query) return sock.sendMessage(chat, { text: "Usage: .song <song name>" });
+    if (!query) return sock.sendMessage(chat, { text: panel("🎵 AUDIO DOWNLOAD", ["Usage: .song <song name>"]) });
 
-    let result;
-    try {
-      await sock.sendMessage(chat, { react: { text: "⏳", key: m.key } });
-      result = await downloaders.searchAndDownloadAudio(query);
-
-      if (result.sizeBytes > SEND_MAX_BYTES) {
-        downloaders.cleanup(result.filePath);
-        return sock.sendMessage(chat, { text: `❌ "${result.title}" is too large to send (${(result.sizeBytes / 1024 / 1024).toFixed(1)}MB).` });
-      }
-
-      await sock.sendMessage(chat, { audio: fs.readFileSync(result.filePath), mimetype: result.format === "mp3" ? "audio/mpeg" : "audio/mp4", fileName: `${result.title}.${result.format}` });
-    } catch (err) {
-      const text = err.isBusy ? err.message : `❌ ${err.message || "Couldn't find or download that song."}`;
-      await sock.sendMessage(chat, { text });
-    } finally {
-      if (result?.filePath) downloaders.cleanup(result.filePath);
-    }
+    await runDownload(sock, m, {
+      title: "🎵 AUDIO DOWNLOAD",
+      intro: ["🔎 Searching for:", `"${query}"`, "", "📥 Downloading..."],
+      fetch: () => downloaders.searchAndDownloadAudio(query),
+      message: (r) => ({ audio: readFile(r.filePath), mimetype: r.format === "mp3" ? "audio/mpeg" : "audio/mp4", fileName: `${r.title}.${r.format}` }),
+      failText: "Couldn't find or download that song."
+    });
   }
 };

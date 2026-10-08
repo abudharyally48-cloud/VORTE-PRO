@@ -1,22 +1,23 @@
 // src/commands/updategdesc.js
-const { guardGroupAdmin } = require("../utils/guards");
+const groupOps = require("../utils/groupOps");
+const { panel, status } = require("../utils/ui");
+
+const TITLE = "👥 GROUP MANAGEMENT";
 
 module.exports = {
   name: "updategdesc",
   aliases: ["setgdesc"],
+  scope: "GROUP",
+  admin: true,
+  botAdmin: true,
   description: "Change the group description (admin only). Usage: .updategdesc <text>",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
-    if (!(await guardGroupAdmin(sock, m, { botAdmin: true }))) return;
     const desc = args.join(" ").trim();
-    if (!desc) return sock.sendMessage(chat, { text: "Usage: .updategdesc <new description>" });
-    if (desc.length > 2048) return sock.sendMessage(chat, { text: "❌ Description too long (max 2048 characters)." });
-    try {
-      await sock.groupUpdateDescription(chat, desc);
-      await sock.sendMessage(chat, { text: "✅ Group description updated." });
-    } catch (err) {
-      console.error("❌ updategdesc error:", err.message);
-      await sock.sendMessage(chat, { text: "❌ Couldn't update the description." });
-    }
+    if (!desc) return sock.sendMessage(chat, { text: panel(TITLE, ["Usage: .updategdesc <new description>"]) });
+    if (desc.length > 2048) return sock.sendMessage(chat, { text: panel(TITLE, ["❌ Description too long (max 2048 characters)."]) });
+    const s = await status(sock, chat, panel(TITLE, ["⚙️ Updating group settings..."]));
+    const r = await groupOps.setDescription(sock, chat, desc);
+    await s.finish(panel(TITLE, [r.ok ? "✅ Group description updated." : `❌ I couldn't change the description: ${r.reason}.`]));
   }
 };

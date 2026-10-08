@@ -1,6 +1,7 @@
 // src/commands/stats.js
 module.exports = {
   name: 'stats',
+  scope: "BOTH",
   description: 'Show bot statistics',
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

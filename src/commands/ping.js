@@ -1,6 +1,7 @@
 // src/commands/ping.js
 module.exports = {
   name: 'ping',
+  scope: "BOTH",
   description: 'Check bot latency',
   async execute(sock, m, args) {
     const start = Date.now();

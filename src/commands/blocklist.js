@@ -5,6 +5,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "blocklist",
+  scope: "OWNER",
   description: "Show the numbers this WhatsApp account has blocked (owner only)",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;

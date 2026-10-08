@@ -15,6 +15,7 @@ const imageStyles = {
 
 module.exports = {
   name: "imageai",
+  scope: "BOTH",
   aliases: Object.keys(imageStyles),
   description: "Generate images with various styles",
   async execute(sock, m, args) {

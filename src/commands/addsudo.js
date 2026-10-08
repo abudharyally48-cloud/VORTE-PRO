@@ -6,6 +6,7 @@ const sudoStore = require("../utils/sudoStore");
 
 module.exports = {
   name: "addsudo",
+  scope: "OWNER",
   description: "Grant a number owner-level access (TRUE owner only). Usage: .addsudo @user  or  .addsudo 2557...",
   async execute(sock, m, args) {
     const chat = m.key.remoteJid;
