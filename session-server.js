@@ -2,6 +2,7 @@
 // This is a SEPARATE server from the main bot.
 // Users visit this to get their SESSION_ID, then deploy the main bot with it.
 // Run with: node session-server.js
+// Made by SIRAH TECH
 
 require('dotenv').config();
 const express = require('express');
