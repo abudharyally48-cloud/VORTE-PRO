@@ -29,6 +29,15 @@ async function main() {
   const getSettings = () => JSON.parse(fs.readFileSync(config.settingsPath));
   const saveSettings = (data) => fs.writeFileSync(config.settingsPath, JSON.stringify(data, null, 2));
 
+  // 2b. Upgrade stored settings to the scoped formats (idempotent)
+  try {
+    const st = getSettings();
+    if (require('./utils/settingsMigrate').migrate(st)) {
+      saveSettings(st);
+      console.log('📦 Settings upgraded to the scoped automation/antidelete format');
+    }
+  } catch (e) { console.error('⚠️ Settings migration skipped:', e.message); }
+
   // 3. Setup Web Server
   const { pairingState } = setupServer();
 
