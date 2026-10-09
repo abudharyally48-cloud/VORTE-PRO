@@ -13,6 +13,8 @@ const config = require("../config/config");
 const helpers = require("../utils/helpers");
 const sessionLoader = require("./sessionLoader");
 const { acquireSession } = require("./sessionPrompt");
+const botActivity = require("../utils/botActivity");
+const identity = require("../utils/identity");
 
 const QR_ENABLED = process.env.ENABLE_QR === "true";
 let reconnectAttempts = 0;
@@ -55,7 +57,7 @@ async function startBot(pairingState, handlers = {}) {
   if (session.status === "missing" && !nowHasCreds && !QR_ENABLED) {
     return stop([
       "No SESSION_ID was provided, so there is nothing to log in with.",
-      "Set the SESSION_ID variable (or paste it when the console asks) and restart.",
+      "Set the SESSION_ID variable, paste it into the console, or put it in a session.txt file next to index.js — then restart.",
       "(For local testing only, ENABLE_QR=true prints a QR code instead.)"
     ]);
   }
@@ -74,6 +76,15 @@ async function startBot(pairingState, handlers = {}) {
   });
 
   sock.ev.on("creds.update", saveCreds);
+
+  // Track what the bot itself sends/deletes so AntiDelete/AntiEdit can ignore it (one wrapper, no per-command changes).
+  botActivity.install(sock);
+
+  // Group state changed (name, description, open/close, edit-info lock, ephemeral…): drop cached
+  // metadata so the next command reads fresh state instead of stale data.
+  sock.ev.on("groups.update", (updates) => {
+    for (const u of updates || []) identity.invalidate(u.id);
+  });
 
   // Update pairing state reference
   pairingState.sock = sock;
