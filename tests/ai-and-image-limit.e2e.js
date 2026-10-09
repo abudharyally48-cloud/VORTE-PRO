@@ -28,13 +28,13 @@ const check = (n, c, d) => { c ? (pass++, console.log('  ✅', n)) : (fail++, co
 (async () => {
   console.log('[AI router]');
   let r = await run('a@s.whatsapp.net', '.gpt hi there');
-  check('.gpt falls through to the only configured provider (Anthropic)', r[0] === 'Hello from Claude mock' && anthropicCalls === 1, JSON.stringify(r));
+  check('.gpt falls through to the only configured provider (Anthropic)', r.slice(-1)[0] === '🤖 AI\n\nHello from Claude mock' && anthropicCalls === 1, JSON.stringify(r));
   r = await run('a@s.whatsapp.net', '.claude hi');
-  check('.claude forces Anthropic', r[0] === 'Hello from Claude mock');
+  check('.claude forces Anthropic', r.slice(-1)[0] === '🤖 AI\n\nHello from Claude mock');
   r = await run('a@s.whatsapp.net', '.deepseek hi');
   check('.deepseek with no key -> clean "not configured" message', r[0]?.includes('provider is not configured'), JSON.stringify(r));
   failNext = true; r = await run('a@s.whatsapp.net', '.ask hi');
-  check('provider failure -> clean error, no crash', r[0]?.includes("couldn't reach the AI"), JSON.stringify(r));
+  check('provider failure -> clean error, no crash', r.slice(-1)[0]?.includes("couldn't reach the AI"), JSON.stringify(r));
   r = await run('a@s.whatsapp.net', '.gpt');
   check('empty question -> usage prompt', r[0]?.includes('provide a question'));
 

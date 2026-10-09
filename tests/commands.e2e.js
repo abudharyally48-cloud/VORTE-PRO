@@ -30,7 +30,18 @@ const sock = {
   sendPresenceUpdate: async () => {},
   readMessages: async () => {},
   groupMetadata: async () => ({ subject: 'Test', desc: 'd', creation: 1700000000, participants, announce: false, restrict: false }),
-  groupParticipantsUpdate: async (c, jids, act) => { calls.push(['participantsUpdate', act, jids]); return jids.map(j => ({ jid: j, status: j.includes('403') ? '403' : '200' })); },
+  groupParticipantsUpdate: async (c, jids, act) => {
+    calls.push(['participantsUpdate', act, jids]);
+    return jids.map(j => {
+      if (j.includes('403')) return { jid: j, status: '403' };
+      const i = participants.findIndex(p => p.id === j || p.jid === j);
+      if (act === 'remove' && i >= 0) participants.splice(i, 1);
+      if (act === 'promote' && i >= 0) participants[i].admin = 'admin';
+      if (act === 'demote' && i >= 0) participants[i].admin = null;
+      if (act === 'add' && i < 0) participants.push({ id: j, admin: null });
+      return { jid: j, status: '200' };
+    });
+  },
   groupRequestParticipantsList: async () => [{ jid: '255700000010@s.whatsapp.net' }, { jid: '255700000011@s.whatsapp.net' }],
   groupRequestParticipantsUpdate: async (c, jids, act) => { calls.push(['reqUpdate', act, jids]); },
   groupRevokeInvite: async () => 'NEWCODE123',
@@ -61,7 +72,7 @@ const OWNER = '255700000001@s.whatsapp.net', ADMIN_PHONE = '255700000002@s.whats
   r = await run(G, ADMIN_PHONE, '.revoke'); check('.revoke works for admin', r.texts[0]?.includes('NEWCODE123'));
   r = await run(G, ADMIN_PHONE, '.updategdesc Hello team'); check('.updategdesc sets description', r.calls[0]?.[1] === 'Hello team');
   r = await run(G, ADMIN_PHONE, '.add 255700000020 255700000021'); check('.add adds numbers', r.calls[0]?.[1] === 'add' && r.calls[0][2].length === 2, JSON.stringify(r));
-  r = await run(G, ADMIN_PHONE, '!requests'); check('!requests (alt prefix) lists pending', r.texts[0]?.includes('Pending requests (2)'), r.texts[0]);
+  r = await run(G, ADMIN_PHONE, '!requests'); check('!requests (alt prefix) lists pending', r.texts[0]?.includes('JOIN REQUESTS (2)'), r.texts[0]);
   r = await run(G, ADMIN_PHONE, '.acceptall'); check('.acceptall approves all', r.calls[0]?.[1] === 'approve' && r.calls[0][2].length === 2);
   r = await run(G, ADMIN_PHONE, '.reject 255700000010'); check('.reject rejects one specific', r.calls[0]?.[1] === 'reject' && r.calls[0][2].length === 1, JSON.stringify(r));
   r = await run(G, ADMIN_PHONE, '.delete'); check('.delete without reply gives usage', r.texts[0]?.includes('Reply to'));
@@ -71,7 +82,7 @@ const OWNER = '255700000001@s.whatsapp.net', ADMIN_PHONE = '255700000002@s.whats
   console.log('\n[blacklist / ban aliases + enforcement]');
   r = await run(G, OWNER, '.ban 255 700 000 050'); check('.ban adds (normalizes spaces)', r.texts[0]?.includes('+255700000050'), r.texts[0]);
   r = await run(G, OWNER, '.banlist'); check('.banlist shows it', r.texts[0]?.includes('+255700000050'));
-  r = await run(G, MEMBER, '.ban 255700000060'); check('.ban rejects non-owner', r.texts[0]?.includes('Owner only'));
+  r = await run(G, MEMBER, '.ban 255700000060'); check('.ban rejects non-owner', r.texts[0]?.includes('Only the bot owner'), r.texts[0]);
   r = await run(G, OWNER, '.ban ' + '255700000001'); check('cannot ban the owner', r.texts[0]?.includes("can't blacklist"));
   sent = []; await handleMessage(sock, { type: 'notify', messages: [msg(G, '255700000050:7@s.whatsapp.net', '.ping')] }, getSettings, saveSettings);
   check('blacklisted user (with :device suffix) is ignored', sent.length === 0, JSON.stringify(sent));
@@ -84,7 +95,7 @@ const OWNER = '255700000001@s.whatsapp.net', ADMIN_PHONE = '255700000002@s.whats
   r = await run(G, OWNER, '.listsudo'); check('.listsudo shows sudo user', r.texts[0]?.includes('255700000077'));
   r = await run(G, OWNER, '.delsudo 255700000077'); check('.delsudo removes', r.texts[0]?.includes('removed'));
   r = await run(G, OWNER, '.sudo 1+1'); check('.sudo eval is disabled by default', r.texts[0]?.includes('disabled'), r.texts[0]);
-  r = await run(G, '255700000077@s.whatsapp.net', '.sudo 1+1'); check('.sudo denies non-owners', r.texts[0]?.includes('Owner only'));
+  r = await run(G, '255700000077@s.whatsapp.net', '.sudo 1+1'); check('.sudo denies non-owners', r.texts[0]?.includes('Only the bot owner'), r.texts[0]);
 
   console.log('\n[welcome / goodbye templates]');
   r = await run(G, ADMIN_PHONE, '.welcome on'); check('.welcome on', store[G]?.welcome === true);
@@ -98,11 +109,12 @@ const OWNER = '255700000001@s.whatsapp.net', ADMIN_PHONE = '255700000002@s.whats
   check('leave uses custom template (object-shaped participants ok)', sent[0]?.content?.text === 'Bye @255700000003', sent[0]?.content?.text);
 
   console.log('\n[antiedit / antidelete]');
-  await run(G, ADMIN_PHONE, '.antidelete on'); await run(G, ADMIN_PHONE, '.antiedit on');
+  await run(G, OWNER, '.antidelete on'); await run(G, ADMIN_PHONE, '.antiedit on');
   const orig = msg(G, MEMBER, 'original text'); orig.key.id = 'MSG1';
   await handleMessage(sock, { type: 'notify', messages: [orig] }, getSettings, saveSettings);
   sent = []; await handleMessageUpdate(sock, [{ key: { remoteJid: G, id: 'MSG1' }, update: { message: null } }], getSettings);
-  check('deleted message is reported with original text', sent[0]?.content?.text?.includes('original text'), sent[0]?.content?.text);
+  check('deleted message is delivered to the OWNER inbox with the original text', sent[0]?.c === OWNER && sent[0]?.content?.text?.includes('original text') && sent[0]?.content?.text?.includes('ANTI-DELETE'), JSON.stringify(sent[0]));
+  check('recovered message is NOT posted back into the group', !sent.some(x => x.c === G && /original text/.test(x.content?.text || '')));
   sent = []; await handleMessageUpdate(sock, [{ key: { remoteJid: G, id: 'MSG1' }, update: { message: { conversation: 'edited text' } } }], getSettings);
   check('edit is reported before/after', sent[0]?.content?.text?.includes('Before: "original text"') && sent[0].content.text.includes('After: "edited text"'), sent[0]?.content?.text);
 
@@ -137,7 +149,8 @@ const OWNER = '255700000001@s.whatsapp.net', ADMIN_PHONE = '255700000002@s.whats
   r = await run(OWNER, OWNER, '.ownername Said'); check('.ownername persists', store.global?.ownerName === 'Said');
   r = await run(G, ADMIN_PHONE, '.reactemojis 😂,🔥'); check('.reactemojis persists per chat', store[G]?.reactEmojis?.length === 2);
   r = await run(G, MEMBER, '.antilink on'); check('non-admin cannot toggle antilink', r.texts[0]?.includes('Only group admins'));
-  r = await run(G, ADMIN_PHONE, '.recording on'); check('.recording alias -> autorecording', store[G]?.autorecording === true, JSON.stringify(store[G]));
+  r = await run(G, OWNER, '.recording on'); check('.recording alias -> global autorecording (owner)', store.global?.automation?.autorecording?.enabled === true, JSON.stringify(store.global));
+  r = await run(G, ADMIN_PHONE, '.autotyping on'); check('group admin cannot change a global automation setting', r.texts[0]?.includes('Only the bot owner'), r.texts[0]);
   r = await run(OWNER, OWNER, '.statusview on'); check('.statusview alias -> global autostatusview', store.global?.autostatusview === true);
 
   console.log(`\nRESULT: ${pass} passed, ${fail} failed`);

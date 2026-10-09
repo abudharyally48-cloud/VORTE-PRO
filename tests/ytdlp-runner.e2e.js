@@ -38,6 +38,12 @@ const downloaders = require("../src/services/downloaders");
   const nt = path.join(dir, "c.txt"); fs.writeFileSync(nt, "# Netscape HTTP Cookie File\n");
   check("Netscape file passed through unchanged", runner.prepareCookies(nt) === nt);
 
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "root-"));
+  check("no cookies file -> null", runner.findCookiesFile({}, root) === null);
+  fs.writeFileSync(path.join(root, "cookies.json"), "[]");
+  check("auto-detects cookies.json in project root without env var", runner.findCookiesFile({}, root) === path.join(root, "cookies.json"));
+  check("env var wins over auto-detect", runner.findCookiesFile({ YTDLP_COOKIES: cj }, root) === cj);
+
   console.log("[ytdlp.js]");
   const info = await ytdlp.getInfo("https://example.com/v");
   check("getInfo parses JSON", info.title === "Fake Title", JSON.stringify(info));

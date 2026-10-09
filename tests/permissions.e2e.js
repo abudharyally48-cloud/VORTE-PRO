@@ -6,7 +6,6 @@ const check = (n, ok, d) => { ok ? pass++ : fail++; console.log(`  ${ok ? "✅" 
 const helpers = require("../src/utils/helpers");
 const identity = require("../src/utils/identity");
 const leave = require("../src/commands/leave");
-const promote = require("../src/commands/promote");
 const { guardGroupAdmin } = require("../src/utils/guards");
 
 const G = "120363000000000001@g.us";
@@ -70,11 +69,7 @@ const msg = (participant, extra = {}) => ({ key: { remoteJid: G, participant, fr
     const r = await guardGroupAdmin(s, asAdmin, { botAdmin: true });
     check("bot-admin-required cmd gives correct result / message", lidMode ? r === true : (r === false && /need to be a group admin/.test(s.sent[0])), s.sent);
 
-    // .promote inline check (had the sock.user.id vs p.id bug)
-    s = mkSock(parts); await identity.resolveSender(s, asAdmin); await promote.execute(s, asAdmin, ["x"]);
-    check(".promote: admin works iff bot is admin", s.promoted === botIsAdmin, s.sent);
-    s = mkSock(parts); await identity.resolveSender(s, asMember); await promote.execute(s, asMember, ["x"]);
-    check(".promote: member denied", s.promoted === false);
+    // (.promote / .kick / ... are gated centrally now: see tests/scope.e2e.js and tests/groupcmds.e2e.js)
 
     // owner detection through LID
     s = mkSock(parts); await identity.resolveSender(s, asOwner);
