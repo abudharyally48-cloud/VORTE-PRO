@@ -3,6 +3,8 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "setgoodbye",
+  scope: "GROUP",
+  admin: true,
   description: "Set a custom goodbye message. Use {user} and {group} as placeholders.",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

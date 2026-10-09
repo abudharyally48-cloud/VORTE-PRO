@@ -8,6 +8,7 @@ const MENU_DIR = path.join(__dirname, "../../storage/menu");
 
 module.exports = {
   name: "setmenudisplay",
+  scope: "OWNER",
   description: "Reply to an image or video/GIF with this to set it as the current menu style's header (owner only)",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;

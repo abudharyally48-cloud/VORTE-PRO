@@ -3,6 +3,7 @@ const helpers = require("../utils/helpers");
 
 module.exports = {
   name: "setmenu1",
+  scope: "OWNER",
   aliases: ["setmenu2", "setmenu3", "setmenu4"],
   description: "Choose the bot's menu style (owner only). Pass a direct URL, or reply to a photo/video with .setmenudisplay.",
   async execute(sock, m, args, getSettings, saveSettings) {
