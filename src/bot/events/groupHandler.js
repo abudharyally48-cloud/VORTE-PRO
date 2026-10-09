@@ -1,5 +1,10 @@
 // src/bot/events/groupHandler.js
 const helpers = require("../../utils/helpers");
+const identity = require("../../utils/identity");
+const groupOps = require("../../utils/groupOps");
+const antiActions = require("../../utils/antiActions");
+
+const { buildWelcome } = require("../../utils/welcomeMessage");
 
 function applyTemplate(template, user, groupName) {
   return template
@@ -15,14 +20,19 @@ async function handleGroupUpdate(sock, update, getSettings) {
     const participants = (update.participants || []).map(p => (typeof p === "string" ? p : (p.id || p.jid))).filter(Boolean);
     const settings = getSettings();
     const chatSetting = settings[id] || {};
-    // Anti-bot: remove flagged bot numbers the moment they join
-    if (action === "add" && chatSetting.antibot && (chatSetting.knownBots || []).length) {
-      const flagged = participants.filter(p => chatSetting.knownBots.includes(helpers.normalizeJid(p)));
+    // Anti-bot: a flagged bot number that JOINS is removed — when the configured action is REMOVE
+    // (warn/delete act on the bot's messages once it speaks; there is nothing to delete at join time).
+    if (action === "add" && chatSetting.antibot && (chatSetting.knownBots || []).length
+        && antiActions.getConfig(settings, id, "antibot").action === "remove") {
+      const raw = (update.participants || []);
+      const flagged = raw.filter((p) => {
+        const keys = identity.participantKeys(typeof p === "string" ? { id: p } : p);
+        return chatSetting.knownBots.some((n) => keys.includes(`pn:${n}`) || keys.includes(`lid:${n}`));
+      }).map((p) => (typeof p === "string" ? p : (p.id || p.jid)));
       if (flagged.length && (await helpers.isBotAdmin(sock, id))) {
-        try {
-          await sock.groupParticipantsUpdate(id, flagged, "remove");
-          await sock.sendMessage(id, { text: `🤖 Removed ${flagged.length} flagged bot(s).` });
-        } catch (e) { console.error('❌ antibot join-removal failed:', e.message); }
+        const res = await groupOps.participantAction(sock, id, flagged, "remove");
+        if (res.ok.length) await sock.sendMessage(id, { text: `🤖 Removed ${res.ok.length} flagged bot(s).` }).catch(() => {});
+        else console.error("❌ antibot join-removal failed:", res.failed[0]?.reason);
       }
     }
 
@@ -40,23 +50,15 @@ async function handleGroupUpdate(sock, update, getSettings) {
       }
 
       if (action === "add" && chatSetting.welcome) {
-        const rules = `
-📜 *GROUP RULES*
-1️⃣ Respect everyone
-2️⃣ No spam
-3️⃣ No links
-4️⃣ No adult content
-5️⃣ Follow admins
-`;
-        const caption = chatSetting.welcomeMessage
-          ? applyTemplate(chatSetting.welcomeMessage, user, groupName)
-          : `┏▣ ◈ WELCOME ◈\n┃ 👋 Welcome @${user.split("@")[0]}\n┃ 📌 Group: ${groupName}\n┗▣\n\n${rules}`;
-
-        await sock.sendMessage(id, {
-          image: { url: pp },
-          caption,
-          mentions: [user],
-        });
+        // Real group description (fetched fresh on every join); the default rules only when there is none.
+        const { caption, followUp } = buildWelcome({ user, groupName, description: metadata.desc, template: chatSetting.welcomeMessage });
+        try {
+          await sock.sendMessage(id, { image: { url: pp }, caption, mentions: [user] });
+        } catch (e) { // picture could not be fetched/sent — the welcome text must still go out
+          await sock.sendMessage(id, { text: [caption, followUp].filter(Boolean).join("\n\n"), mentions: [user] });
+          continue;
+        }
+        if (followUp) await sock.sendMessage(id, { text: followUp, mentions: [user] });
       }
 
       if (action === "remove" && chatSetting.goodbye) {
