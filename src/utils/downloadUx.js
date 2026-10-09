@@ -1,0 +1,42 @@
+// src/utils/downloadUx.js
+// One edited status message for every download command (instead of a reaction plus
+// separate result/error messages):  🔎 Searching → 📤 Sending → ✅ Ready!
+const fs = require("fs");
+const downloaders = require("../services/downloaders");
+const { panel, status } = require("./ui");
+
+const SEND_MAX_BYTES = (Number(process.env.YTDLP_SEND_MAX_MB) || 100) * 1024 * 1024;
+const mb = (n) => (n / 1024 / 1024).toFixed(1);
+
+/**
+ * @param {object} o
+ * @param {string} o.title     e.g. "🎵 AUDIO DOWNLOAD"
+ * @param {string[]} o.intro   first status lines, e.g. ['🔎 Searching for:', '"song"']
+ * @param {() => Promise<{filePath:string,title:string,sizeBytes:number,format?:string}>} o.fetch
+ * @param {(result) => object} o.message   builds the WhatsApp content to send for the file
+ * @param {string} o.failText  fallback error text
+ */
+async function runDownload(sock, m, o) {
+  const chat = m.key.remoteJid;
+  const s = await status(sock, chat, panel(o.title, o.intro), { quoted: m });
+  let result;
+  try {
+    result = await o.fetch();
+    if (result.sizeBytes > SEND_MAX_BYTES) {
+      await s.fail(panel(o.title, [`❌ "${result.title}" is too large to send over WhatsApp (${mb(result.sizeBytes)}MB, limit ${mb(SEND_MAX_BYTES)}MB).`]));
+      return;
+    }
+    await s.update(panel(o.title, [`🎞️ ${result.title}`, "📤 Sending..."]));
+    await sock.sendMessage(chat, o.message(result), { quoted: m });
+    await s.finish(panel(o.title, [`🎞️ ${result.title}`, "✅ Ready!"]));
+  } catch (err) {
+    console.error(`❌ ${o.title}:`, err.message);
+    await s.fail(panel(o.title, [err.isBusy ? err.message : `❌ ${err.message || o.failText}`]));
+  } finally {
+    if (result?.filePath) downloaders.cleanup(result.filePath);
+  }
+}
+
+const readFile = (p) => fs.readFileSync(p);
+
+module.exports = { runDownload, readFile, SEND_MAX_BYTES };

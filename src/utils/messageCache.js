@@ -3,7 +3,7 @@
 // only that it happened. To show what was edited/deleted, we cache recent
 // message content ourselves, keyed by message id, bounded so it can't grow
 // forever.
-const MAX_ENTRIES = 2000;
+const MAX_ENTRIES = 5000;
 const cache = new Map();
 
 /**
@@ -27,4 +27,10 @@ function get(id) {
   return cache.get(id);
 }
 
-module.exports = { store, get };
+/** Keep the cached text current after an edit so the next edit diffs against the latest version. */
+function update(id, patch) {
+  const cur = cache.get(id);
+  if (cur) cache.set(id, { ...cur, ...patch });
+}
+
+module.exports = { store, get, update };
