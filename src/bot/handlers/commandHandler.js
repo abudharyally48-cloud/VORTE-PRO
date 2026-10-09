@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../../config/config');
 const helpers = require('../../utils/helpers');
+const access = require('../../utils/access');
 
 class CommandHandler {
   constructor() {
@@ -39,6 +40,11 @@ class CommandHandler {
     return this.commands.size;
   }
 
+  /** Number of distinct commands (aliases not counted). */
+  getPrimaryCount() {
+    return new Set(this.commands.values()).size;
+  }
+
   async handle(sock, m, body, getSettings, saveSettings) {
     const settingsSnapshot = getSettings?.() || {};
     const customPrefix = settingsSnapshot.global?.customPrefix;
@@ -56,10 +62,19 @@ class CommandHandler {
       // commandHandler itself — that created a circular dependency.
       const context = {
         commandCount: this.commands.size,
+        primaryCount: this.getPrimaryCount(),
+        registry: this.commands,
         prefix: matchedPrefix,
         botName: config.botName
       };
       try {
+        // Scope / permission gate (PRIVATE | GROUP | BOTH | OWNER, admin, bot-admin).
+        // A wrong-context or unauthorised call always gets a clear reply — never silence.
+        const verdict = await access.check(sock, m, command, commandName, args);
+        if (!verdict.ok) {
+          await sock.sendMessage(m.key.remoteJid, { text: verdict.message });
+          return;
+        }
         await command.execute(sock, m, args, getSettings, saveSettings, context);
       } catch (error) {
         console.error(`❌ Error executing command "${commandName}":`, error);
