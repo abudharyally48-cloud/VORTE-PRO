@@ -12,6 +12,7 @@ const {
   Browsers
 } = require("baileys");
 const config = require('../config/config');
+const siteStats = require('./siteStats');
 
 const app = express();
 
@@ -24,12 +25,47 @@ const pairingState = {
 // Map to track temporary session generator requests
 const sessionMap = new Map();
 
+const BOT_FILE = path.join(__dirname, '../../files/VORTE-PRO.zip'); // downloadable bot (see files/README.md)
+const COOLDOWN_MS = Number(process.env.PAIRING_COOLDOWN_MS) || 5000; // minimum gap between code requests for the same number (protects it from WhatsApp rate limits)
+const PAIRING_EXPIRE_MS = Number(process.env.PAIRING_EXPIRE_MS) || 10 * 60 * 1000; // a pairing nobody completes is cleaned up and counted as failed
+const lastRequestAt = new Map();          // phone digits -> time of last code request
+const BOT_UA = /bot|crawl|spider|slurp|curl|wget|python-requests|monitor|uptime|pingdom|headless|lighthouse|facebookexternalhit/i;
+
+const waitingCount = () => [...sessionMap.values()].filter((e) => e.status === 'waiting').length;
+const parseCookies = (h) => Object.fromEntries(String(h || '').split(';').map((c) => c.trim().split('=')).filter((p) => p[0]).map(([k, ...v]) => [k, v.join('=')]));
+function botVersion() { try { const [a, b] = String(require('../../package.json').version).split('.'); return `v${a}.${b || 0}`; } catch { return 'v1.0'; } }
+function baileysVersion() { try { return require('baileys/package.json').version; } catch { return 'unknown'; } }
+
+/** Count a page view and (once per browser, via cookie) a unique visitor. Bots are skipped. */
+function countVisit(req, res) {
+  if (req.method !== 'GET' || BOT_UA.test(req.headers['user-agent'] || '')) return;
+  siteStats.pageView();
+  if (!parseCookies(req.headers.cookie).vp_vid) {
+    res.cookie('vp_vid', Date.now().toString(36) + Math.random().toString(36).slice(2, 8), { maxAge: 365 * 24 * 3600 * 1000, httpOnly: true, sameSite: 'lax' });
+    siteStats.newVisitor();
+  }
+}
+
+/** Remove temp session folders left behind by an earlier crash/restart. */
+function sweepTempSessions() {
+  try {
+    const base = path.join(process.cwd(), 'storage', 'temp_sessions');
+    if (!fs.existsSync(base)) return;
+    for (const d of fs.readdirSync(base)) {
+      const p = path.join(base, d);
+      if (Date.now() - fs.statSync(p).mtimeMs > 30 * 60 * 1000) fs.rmSync(p, { recursive: true, force: true });
+    }
+  } catch { /* best effort */ }
+}
+
 function setupServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  sweepTempSessions();
 
   // Serve pairing.html
   app.get('/', (req, res) => {
+    try { countVisit(req, res); } catch (e) { /* counting must never break the page */ }
     res.sendFile(path.join(__dirname, '../../pairing.html'));
   });
 
@@ -66,26 +102,70 @@ function setupServer() {
     }
 
     const token = cleanPhone;
-    
-    // Check if in-progress
-    if (sessionMap.has(token) && sessionMap.get(token).status === 'waiting') {
-      return res.status(429).json({ success: false, error: 'A pairing is already in progress for this number. Please wait.' });
+
+    // Short pause between requests for the same number (the very first request is never delayed).
+    const since = Date.now() - (lastRequestAt.get(token) || 0);
+    if (since < COOLDOWN_MS) {
+      const wait = Math.ceil((COOLDOWN_MS - since) / 1000);
+      return res.status(429).json({ success: false, error: `Please wait ${wait}s before requesting another code for this number.`, retryAfter: wait });
+    }
+    lastRequestAt.set(token, Date.now());
+
+    // A wrong-code / expired / abandoned attempt for this number must never block a new one:
+    // cancel it and carry on, so a fresh code can be requested whenever the user wants.
+    const previous = sessionMap.get(token);
+    if (previous && previous.status === 'waiting') {
+      previous.cancel('replaced');
+      siteStats.retry();
     }
 
-    try {
-      sessionMap.set(token, { status: 'waiting', sessionId: null });
-      
-      const tempSessionFolder = path.join(process.cwd(), 'storage', 'temp_sessions', token);
-      if (fs.existsSync(tempSessionFolder)) {
-        fs.rmSync(tempSessionFolder, { recursive: true, force: true });
+    let isFinished = false;
+    let cancelled = false;
+    let currentSock = null;
+    let expireTimer = null;
+    const attemptId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    // one folder PER ATTEMPT, so a cancelled attempt can never touch the next one's files
+    const tempSessionFolder = path.join(process.cwd(), 'storage', 'temp_sessions', `${token}_${attemptId}`);
+    const removeFolderLater = (ms) => setTimeout(() => {
+      try { if (fs.existsSync(tempSessionFolder)) fs.rmSync(tempSessionFolder, { recursive: true, force: true }); } catch (e) {}
+    }, ms);
+
+    const entry = {
+      status: 'waiting',
+      sessionId: null,
+      createdAt: Date.now(),
+      cancel: (reason) => {
+        if (isFinished || cancelled) return;
+        cancelled = true; isFinished = true;
+        clearTimeout(expireTimer);
+        try { currentSock?.ev?.removeAllListeners?.('creds.update'); } catch (e) {}
+        try { currentSock?.end(undefined); } catch (e) {}
+        removeFolderLater(5000); // let any pending credential write drain first
+        if (sessionMap.get(token) === entry) sessionMap.delete(token);
+        if (!res.headersSent) res.status(409).json({ success: false, error: 'Superseded by a newer request.' });
+        console.log(`🛑 Pairing attempt for +${token} cancelled (${reason}).`);
       }
+    };
+    // only touch the shared map entry while it is still THIS attempt's
+    const update = (patch) => { if (sessionMap.get(token) === entry) Object.assign(entry, patch); };
+
+    try {
+      sessionMap.set(token, entry);
+      expireTimer = setTimeout(() => {
+        if (entry.status === 'waiting' && !isFinished) {
+          console.log(`⌛ Pairing for +${token} expired without being completed.`);
+          siteStats.fail();
+          entry.cancel('expired');
+        }
+      }, PAIRING_EXPIRE_MS);
+      if (expireTimer.unref) expireTimer.unref();
+
       fs.mkdirSync(tempSessionFolder, { recursive: true });
 
       const { state, saveCreds } = await useMultiFileAuthState(tempSessionFolder);
       const { version } = await fetchLatestBaileysVersion();
 
       let codeRequested = false;
-      let isFinished = false;
 
       const startSock = () => {
         const sock = makeWASocket({
@@ -97,38 +177,42 @@ function setupServer() {
           },
           version,
         });
+        currentSock = sock;
 
         sock.ev.on("creds.update", saveCreds);
 
-        sock.ev.on("connection.update", async (update) => {
+        sock.ev.on("connection.update", async (update_) => {
           if (isFinished) return;
-          const { connection, lastDisconnect } = update;
-          
+          const { connection, lastDisconnect } = update_;
+
           if (connection === 'open') {
             console.log(`✅ Session connected for +${token}. Extracting Session ID...`);
             try {
               // Wait slight delay to ensure creds.json is fully written
               setTimeout(async () => {
+                if (cancelled) return;
                 const credsPath = path.join(tempSessionFolder, 'creds.json');
                 if (fs.existsSync(credsPath)) {
                   const creds = fs.readFileSync(credsPath);
                   const b64 = creds.toString('base64');
                   const sessionId = 'VORTE_PRO~' + b64;
-                  
-                  sessionMap.set(token, { status: 'ready', sessionId });
+
+                  clearTimeout(expireTimer);
+                  update({ status: 'ready', sessionId });
+                  siteStats.success();
                   console.log(`🎉 Session IDs generated for +${token}`);
-                  
+
                   try {
                     // Send to user's own number
                     let jid = sock.user?.id;
                     if (jid) {
                        jid = jid.split(':')[0] + '@s.whatsapp.net';
-                       await sock.sendMessage(jid, { 
-                           text: `*✅ VORTE-PRO SESSION GENERATED!*\n\n> ⚠️ *Important:* Never share this ID with anyone. It acts as your login credential.\n\nCopy the ID below:` 
+                       await sock.sendMessage(jid, {
+                           text: `*✅ VORTE-PRO SESSION GENERATED!*\n\n> ⚠️ *Important:* Never share this ID with anyone. It acts as your login credential.\n\nCopy the ID below:`
                        });
                        await new Promise(resolve => setTimeout(resolve, 800));
-                       await sock.sendMessage(jid, { 
-                           text: sessionId 
+                       await sock.sendMessage(jid, {
+                           text: sessionId
                        });
                        // Wait briefly to allow the WebSocket buffer to successfully deliver the message
                        await new Promise(resolve => setTimeout(resolve, 1500));
@@ -138,24 +222,26 @@ function setupServer() {
                   }
 
                   isFinished = true;
-                  
+
                   // Cleanup connection and temporary files
                   try { sock.end(); } catch(e) {}
-                  
+
                    setTimeout(() => {
                     if (fs.existsSync(tempSessionFolder)) {
                        fs.rmSync(tempSessionFolder, { recursive: true, force: true });
                     }
-                    sessionMap.delete(token); // Final removal from memory
+                    if (sessionMap.get(token) === entry) sessionMap.delete(token); // Final removal from memory (never a NEWER attempt's entry)
                     console.log(`🧹 Full cleanup completed for +${token}`);
                   }, 60000); // Wait 60s for Baileys saveCreds internal debounce queue to drain completely
                 } else {
-                  sessionMap.set(token, { status: 'error', error: 'Credentials file not found.' });
+                  update({ status: 'error', error: 'Credentials file not found.' });
+                  siteStats.fail();
                 }
               }, 3000);
             } catch(e) {
               console.error('Error in session success handler:', e);
-              sessionMap.set(token, { status: 'error', error: 'Failed to extract session' });
+              update({ status: 'error', error: 'Failed to extract session' });
+              siteStats.fail();
             }
           } else if (connection === 'close') {
              const reason = lastDisconnect?.error?.output?.statusCode;
@@ -174,6 +260,7 @@ function setupServer() {
         // Give Baileys a moment to initialize before requesting code
         if (!codeRequested) {
           setTimeout(async () => {
+            if (isFinished) return; // cancelled while waiting
             try {
               if (!sock.authState.creds.me) {
                 const code = await sock.requestPairingCode(cleanPhone);
@@ -186,7 +273,13 @@ function setupServer() {
               }
             } catch(err) {
               console.error('Failed to request code:', err.message);
-              sessionMap.delete(token);
+              if (!isFinished) {
+                isFinished = true; clearTimeout(expireTimer);
+                try { sock.end(); } catch (e) {}
+                removeFolderLater(5000);
+                siteStats.fail();
+                if (sessionMap.get(token) === entry) sessionMap.delete(token);
+              }
               if (!res.headersSent) {
                 res.status(500).json({ success: false, error: 'Failed to generate pairing code' });
               }
@@ -199,7 +292,8 @@ function setupServer() {
 
     } catch (err) {
       console.error('❌ Generator error:', err);
-      sessionMap.delete(token);
+      if (!isFinished) { isFinished = true; clearTimeout(expireTimer); siteStats.fail(); removeFolderLater(5000); }
+      if (sessionMap.get(token) === entry) sessionMap.delete(token);
       if (!res.headersSent) {
         res.status(500).json({ success: false, error: 'Internal server error.' });
       }
@@ -231,8 +325,50 @@ function setupServer() {
     res.json({
       botName: config.botName,
       uptime: Math.floor(process.uptime()),
-      activePairings: sessionMap.size
+      activePairings: waitingCount()
     });
+  });
+
+  // REAL numbers for the site (counted on the server, saved to disk). No simulation.
+  app.get('/api/stats', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const st = siteStats.snapshot();
+    res.json({
+      visitors: st.visitors,
+      pageViews: st.pageViews,
+      successful: st.successful,
+      failed: st.failed,
+      downloads: st.downloads,
+      countingSince: st.since,
+      uptimeSeconds: Math.floor(process.uptime()),
+      startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+      activePairings: waitingCount(),
+      botName: config.botName,
+      botVersion: botVersion(),
+      baileysVersion: baileysVersion()
+    });
+  });
+
+  // Is there a bot file to download? (uploaded ZIP, or an external link from BOT_DOWNLOAD_URL)
+  app.get('/api/bot-file', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    try {
+      if (fs.existsSync(BOT_FILE)) return res.json({ available: true, kind: 'file', name: 'VORTE-PRO.zip', sizeBytes: fs.statSync(BOT_FILE).size, version: botVersion() });
+    } catch (e) { /* fall through */ }
+    if (/^https?:\/\//i.test(process.env.BOT_DOWNLOAD_URL || '')) return res.json({ available: true, kind: 'link', name: 'VORTE-PRO', sizeBytes: null, version: botVersion() });
+    res.json({ available: false, version: botVersion() });
+  });
+
+  app.get('/download/bot', (req, res) => {
+    if (fs.existsSync(BOT_FILE)) {
+      siteStats.download();
+      return res.download(BOT_FILE, 'VORTE-PRO.zip');
+    }
+    if (/^https?:\/\//i.test(process.env.BOT_DOWNLOAD_URL || '')) {
+      siteStats.download();
+      return res.redirect(process.env.BOT_DOWNLOAD_URL);
+    }
+    res.status(404).send('The bot file has not been uploaded yet.');
   });
 
   // Health and Keep-alive
@@ -241,6 +377,7 @@ function setupServer() {
       status: 'ok', 
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
+      activeSessions: waitingCount(),
       memory: process.memoryUsage()
     });
   });
