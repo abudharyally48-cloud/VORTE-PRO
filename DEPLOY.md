@@ -137,3 +137,13 @@ For users who want full control and better performance.
 - **Wrong code?** A new code for the same number can be requested at any time (short pause between requests, `PAIRING_COOLDOWN_MS`). An unfinished pairing expires after `PAIRING_EXPIRE_MS` (default 10 min) and is counted as failed.
 - **Real counters** (visitors, successful / failed generations, uptime) are counted on the server and saved to `storage/site-stats.json`. Hosts that wipe the disk on redeploy start from zero again.
 - **Bot download button:** upload your ZIP as `files/VORTE-PRO.zip` (see `files/README.md`), or set `BOT_DOWNLOAD_URL` to a link. Never include `.env`, `session.txt`, or `storage/session` in that ZIP.
+
+## 🔣 Prefix
+
+One `PREFIX` setting, same rules as Queen Anita v4:
+
+- `PREFIX=.` — only `.` works (the default).
+- `PREFIX=.!*` — each of `.` `!` `*` works.
+- `PREFIX=all` — any symbol works, and so does no prefix at all (only real command names react, so ordinary chat is ignored).
+
+The owner can change it live: `.prefix !`, `.prefix .!*`, `.prefix all`, and undo it with `.prefix reset`. That last one **always** works, whatever the current prefix, so you can't lock yourself out. Menus and usage messages show the real prefix. To keep the old behaviour (`. ! ? $ % & *` all working) set `PREFIX=.!?$%&*`.
