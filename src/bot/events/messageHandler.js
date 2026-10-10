@@ -7,6 +7,7 @@ const identity = require("../../utils/identity");
 const automation = require("../../utils/automation");
 const antiDelete = require("../../utils/antiDelete");
 const antiActions = require("../../utils/antiActions");
+const prefixLib = require("../../utils/prefix");
 
 const lastCommand = {};
 const recentMessages = {}; // for antispam flood detection
@@ -52,6 +53,12 @@ async function processMessage(sock, m, getSettings, saveSettings) {
   const groupSetting = settings[chat] || {};
   const globalSetting = settings.global || { mode: "public" }; // Default to public
 
+  // Remember this message for antiedit/antidelete BEFORE any gate below. Self mode, mute and anti-bot
+  // decide who the bot ANSWERS — they must not stop it from keeping a copy, or a deleted message from
+  // anyone else could never be recovered. (Text always; media too when AntiDelete is on.)
+  // Not awaited: downloading media must never delay the command flow.
+  antiDelete.remember(sock, m, settings).catch((e) => console.error("⚠️ antidelete remember failed:", e.message));
+
   // Enforcement: If in "self" (private) mode, only owner can use the bot
   const isOwner = helpers.isOwner(sender) || m.key?.fromMe;
   if (globalSetting.mode === "self" && !isOwner) return;
@@ -67,10 +74,6 @@ async function processMessage(sock, m, getSettings, saveSettings) {
     await antiActions.enforce(sock, { chat, sender, m, feature: "antibot", settings, saveSettings });
     return;
   }
-
-  // Remember this message (text always; media too when AntiDelete is on) for antiedit/antidelete.
-  // Not awaited: downloading media must never delay the command flow.
-  antiDelete.remember(sock, m, settings).catch((e) => console.error("⚠️ antidelete remember failed:", e.message));
 
   // Enforcement: ignore anyone on the blacklist entirely
   if (!isOwner && (globalSetting.blacklist || []).includes(helpers.normalizeJid(sender))) return;
@@ -94,7 +97,9 @@ async function processMessage(sock, m, getSettings, saveSettings) {
   }
 
   // Allow self-commands: ignore fromMe ONLY if it's not a command
-  if (m.key?.fromMe && !helpers.matchPrefix(body, globalSetting.customPrefix ? [globalSetting.customPrefix] : [])) return;
+  const hit = prefixLib.match(body, settings);
+  const isCommandText = (h) => !!h && (!h.loose || commandHandler.commands.has(h.rest.trim().split(/\s+/)[0].toLowerCase()));
+  if (m.key?.fromMe && !isCommandText(hit)) return;
 
   // Online: keep presence set to available while enabled
   if (globalSetting.online) {
@@ -194,7 +199,7 @@ async function processMessage(sock, m, getSettings, saveSettings) {
   }
 
   // Handle Commands
-  if (helpers.matchPrefix(body, globalSetting.customPrefix ? [globalSetting.customPrefix] : [])) {
+  if (isCommandText(hit)) {
     // Cooldown
     const now = Date.now();
     const cooldownKey = `${chat}_${sender}`;
