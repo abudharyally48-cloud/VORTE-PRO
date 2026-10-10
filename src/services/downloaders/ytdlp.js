@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const runner = require("./ytdlpRunner");
-const { isFfmpegAvailable } = require("./ffmpegCheck");
+const { ensureFfmpeg } = require("./ffmpegCheck");
 
 const TMP_DIR = path.join(__dirname, "../../../storage/tmp/downloads");
 
@@ -19,20 +19,36 @@ async function ensureBinary() {
   return !!(await runner.ensureBinary());
 }
 
-function uniqueFilePath(ext) {
+/** Every download works in its own "<base>.*" family of files, so cleanup can never touch anyone else's. */
+function newBase() {
   ensureTmpDir();
-  return path.join(TMP_DIR, `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${ext}`);
+  return `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
+}
+const familyOf = (base) => { try { return fs.readdirSync(TMP_DIR).filter((f) => f.startsWith(base + ".")).map((f) => path.join(TMP_DIR, f)); } catch { return []; } };
+const isPartial = (f) => /\.(part|ytdl|temp|tmp)(\.|$)|\.f[\w-]+\.\w+$|-Frag\d+$/i.test(path.basename(f));
+function removeFamily(base, keep) {
+  for (const f of familyOf(base)) if (f !== keep) { try { fs.unlinkSync(f); } catch { /* ignore */ } }
+}
+
+/** The one-line JSON yt-dlp prints once the final file is in place. */
+function parsePrinted(stdout) {
+  const lines = String(stdout || "").trim().split("\n").reverse();
+  for (const l of lines) { try { const j = JSON.parse(l); if (j && typeof j === "object") return j; } catch { /* next */ } }
+  return null;
 }
 
 /** Convert a raw yt-dlp/execa failure into a short, honest, user-facing reason. */
 function classifyError(err) {
   const msg = String(err?.stderr || err?.message || err || "").toLowerCase();
+  if (err?.code === "NEEDS_FFMPEG") return err.message;
   if (err?.timedOut) return "Download timed out.";
-  if (msg.includes("confirm you're not a bot") || msg.includes("confirm you\u2019re not a bot") || msg.includes("sign in to confirm")) return "YouTube is blocking this server (bot check). The host needs YTDLP_COOKIES set — see .env.example.";
+  if (msg.includes("confirm you're not a bot") || msg.includes("confirm you\u2019re not a bot") || msg.includes("sign in to confirm")) return "YouTube is blocking this server (bot check). The host needs cookies — see .env.example (YTDLP_COOKIES).";
+  if (msg.includes("instagram") && (msg.includes("login required") || msg.includes("rate-limit") || msg.includes("empty media response") || msg.includes("not available"))) return "Instagram needs a login for this post. Add instagram.com cookies (see .env.example), or try a public post.";
+  if (msg.includes("tiktok") && (msg.includes("ip address is blocked") || msg.includes("unable to extract") || msg.includes("not available"))) return "TikTok didn't give this server the video (it may be blocking the host's IP, or the video is private/removed).";
   if (msg.includes("http error 429") || msg.includes("too many requests")) return "The source is rate-limiting this server. Try again later.";
   if (msg.includes("http error 403") || msg.includes("forbidden")) return "The source refused this server's request (HTTP 403).";
-  if (msg.includes("ffmpeg") && (msg.includes("not found") || msg.includes("not installed") || msg.includes("ffprobe"))) return "This download needs ffmpeg, which isn't installed on the host.";
-  if (msg.includes("requested format is not available")) return "No downloadable format was found for that link.";
+  if (msg.includes("ffmpeg") && (msg.includes("not found") || msg.includes("not installed") || msg.includes("ffprobe"))) return "This download needs ffmpeg, which isn't available on the host.";
+  if (msg.includes("requested format is not available")) return "No downloadable format was found for that link. Send .dltest <link> to see what the source offers.";
   if (msg.includes("private video") || msg.includes("login required") || msg.includes("log in") || msg.includes("login")) return "This content is private or requires login.";
   if (msg.includes("video unavailable") || msg.includes("this video is not available")) return "Video unavailable.";
   if (msg.includes("unsupported url") || msg.includes("no extractor")) return "Unsupported URL.";
@@ -41,6 +57,8 @@ function classifyError(err) {
   if (msg.includes("this video has been removed") || msg.includes("deleted")) return "This content was deleted.";
   return "Could not extract media.";
 }
+
+const formatNotAvailable = (err) => /requested format is not available/i.test(String(err?.stderr || err?.message || ""));
 
 /**
  * @param {string} url
@@ -93,78 +111,113 @@ async function search(query, limit = 5) {
 }
 
 /**
- * Download a video. Prefers a pre-merged format (no ffmpeg needed); if
- * ffmpeg IS available, allows yt-dlp to merge separate best video+audio
- * streams for better quality.
+ * Try each attempt (a set of yt-dlp flags) in turn. Only "requested format is not available" moves on to
+ * the next one; any other failure (bot check, timeout, private...) is final and reported as it is.
+ */
+async function runAttempts(url, common, attempts, base, deadline) {
+  let last;
+  for (let i = 0; i < attempts.length; i++) {
+    const left = deadline - Date.now();
+    if (left < 3000) break;
+    try {
+      return await runner.exec(url, { ...common, ...attempts[i] }, { timeout: left });
+    } catch (err) {
+      last = err;
+      removeFamily(base);                       // partial files of the failed attempt
+      if (!formatNotAvailable(err) || i === attempts.length - 1) throw err;
+    }
+  }
+  throw last || Object.assign(new Error("timed out"), { timedOut: true });
+}
+
+/** Turn what yt-dlp printed / left on disk into the result object. */
+function collect(base, stdout, fallbackTitle) {
+  const printed = parsePrinted(stdout);
+  let file = printed?.filepath && fs.existsSync(printed.filepath) ? printed.filepath : null;
+  if (!file) {
+    const done = familyOf(base).filter((f) => !isPartial(f)).sort((a, b) => fs.statSync(b).size - fs.statSync(a).size);
+    file = done[0] || null;
+  }
+  if (!file) throw new Error("yt-dlp reported success but no output file was found.");
+  removeFamily(base, file);
+  return { filePath: file, title: printed?.title || fallbackTitle, sizeBytes: fs.statSync(file).size, format: path.extname(file).slice(1).toLowerCase() || printed?.ext || "" };
+}
+
+const NEEDS_FFMPEG_MSG = "This source serves picture and sound as separate streams, and joining them needs ffmpeg — which couldn't be set up on this host.";
+
+/**
+ * Download a video.
+ *  - ffmpeg available: best picture + best sound joined into one mp4 (works for YouTube / Instagram / TikTok
+ *    sources that deliver them separately), preferring H.264/AAC so WhatsApp can play it.
+ *  - no ffmpeg: a stream that already has both; if the source only has separate streams, say so clearly.
  * @param {string} url
- * @param {{ maxHeight?: number, timeoutMs?: number }} [opts]
- * @returns {Promise<{ filePath: string, title: string, sizeBytes: number }>}
+ * @param {{ maxHeight?: number, timeoutMs?: number, maxFilesizeMB?: number }} [opts]
+ * @returns {Promise<{ filePath: string, title: string, sizeBytes: number, format: string }>}
  */
 async function downloadVideo(url, opts = {}) {
   if (!(await ensureBinary())) throw new Error("yt-dlp is not available on this host.");
   const maxHeight = opts.maxHeight || 480; // WhatsApp-friendly default; avoids huge files
-  const ffmpeg = await isFfmpegAvailable();
-  const outPath = uniqueFilePath("mp4");
-
-  const format = ffmpeg
-    ? `bestvideo[height<=${maxHeight}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${maxHeight}][ext=mp4]/best[height<=${maxHeight}]`
-    : `best[height<=${maxHeight}][ext=mp4]/best[height<=${maxHeight}]`; // single pre-merged stream only, no merge step
+  const ff = await ensureFfmpeg();
+  const base = newBase();
+  const h = `[height<=?${maxHeight}]`; // "<=?" keeps formats whose height is unknown (TikTok/Instagram often report none)
+  const common = {
+    output: path.join(TMP_DIR, `${base}.%(ext)s`),
+    formatSort: `res:${maxHeight},vcodec:h264,acodec:aac`,
+    print: "after_move:%(.{title,ext,filepath})j",
+    noQuiet: true,       // --print silences yt-dlp; we want its messages (e.g. "file larger than max-filesize")
+    noProgress: true,
+    noWarnings: true,
+    noPlaylist: true,
+    maxFilesize: `${opts.maxFilesizeMB || DEFAULT_MAX_FILESIZE_MB}M`
+  };
+  const attempts = ff
+    ? [{ format: `bv*${h}+ba/b${h}/bv*+ba/b`, mergeOutputFormat: "mp4" }, { format: "b", mergeOutputFormat: "mp4" }]
+    : [{ format: `b${h}[ext=mp4]/b${h}/b` }];
 
   try {
-    await runner.exec(url, {
-      output: outPath,
-      format,
-      noWarnings: true,
-      noPlaylist: true,
-      maxFilesize: `${opts.maxFilesizeMB || DEFAULT_MAX_FILESIZE_MB}M`,
-      mergeOutputFormat: ffmpeg ? "mp4" : undefined
-    }, { timeout: opts.timeoutMs || DEFAULT_TIMEOUT_MS });
-
-    if (!fs.existsSync(outPath)) throw new Error("yt-dlp reported success but no output file was found.");
-    const { size } = fs.statSync(outPath);
-    const info = await getInfo(url, { timeoutMs: 15000 }).catch(() => null);
-    return { filePath: outPath, title: info?.title || "video", sizeBytes: size };
+    const stdout = await runAttempts(url, common, attempts, base, Date.now() + (opts.timeoutMs || DEFAULT_TIMEOUT_MS));
+    return collect(base, stdout, "video");
   } catch (err) {
-    cleanup(outPath);
+    removeFamily(base);
     if (err.message?.startsWith("yt-dlp reported") || err.message?.startsWith("yt-dlp is not")) throw err;
-    const e = new Error(classifyError(err));
+    const e = new Error(!ff && formatNotAvailable(err) ? NEEDS_FFMPEG_MSG : classifyError(err));
+    if (!ff && formatNotAvailable(err)) e.code = "NEEDS_FFMPEG";
     e.cause = err;
     throw e;
   }
 }
 
 /**
- * Download audio only. Converts to mp3 when ffmpeg is available; otherwise
- * keeps whatever best audio-only format yt-dlp extracts natively (m4a/webm)
- * rather than failing outright.
+ * Download audio only.
+ *  - ffmpeg available: converted to mp3.
+ *  - no ffmpeg: the best audio stream as it is (m4a preferred — WhatsApp plays it) — NO conversion step,
+ *    which is what needs ffmpeg. (It used to always ask for conversion and so always failed without ffmpeg.)
  * @param {string} url
- * @param {{ timeoutMs?: number }} [opts]
+ * @param {{ timeoutMs?: number, maxFilesizeMB?: number }} [opts]
  * @returns {Promise<{ filePath: string, title: string, sizeBytes: number, format: string }>}
  */
 async function downloadAudio(url, opts = {}) {
   if (!(await ensureBinary())) throw new Error("yt-dlp is not available on this host.");
-  const ffmpeg = await isFfmpegAvailable();
-  const ext = ffmpeg ? "mp3" : "m4a";
-  const outPath = uniqueFilePath(ext);
+  const ff = await ensureFfmpeg();
+  const base = newBase();
+  const common = {
+    output: path.join(TMP_DIR, `${base}.%(ext)s`),
+    print: "after_move:%(.{title,ext,filepath})j",
+    noQuiet: true,       // --print silences yt-dlp; we want its messages (e.g. "file larger than max-filesize")
+    noProgress: true,
+    noWarnings: true,
+    noPlaylist: true,
+    maxFilesize: `${opts.maxFilesizeMB || DEFAULT_MAX_FILESIZE_MB}M`
+  };
+  const attempts = ff
+    ? [{ format: "ba/b", extractAudio: true, audioFormat: "mp3", audioQuality: "5" }]
+    : [{ format: "ba[ext=m4a]/ba[acodec^=mp4a]/ba/b" }];
 
   try {
-    await runner.exec(url, {
-      output: outPath,
-      format: "bestaudio/best",
-      extractAudio: true,
-      audioFormat: ffmpeg ? "mp3" : undefined,
-      audioQuality: ffmpeg ? "5" : undefined,
-      noWarnings: true,
-      noPlaylist: true,
-      maxFilesize: `${opts.maxFilesizeMB || DEFAULT_MAX_FILESIZE_MB}M`
-    }, { timeout: opts.timeoutMs || DEFAULT_TIMEOUT_MS });
-
-    if (!fs.existsSync(outPath)) throw new Error("yt-dlp reported success but no output file was found.");
-    const { size } = fs.statSync(outPath);
-    const info = await getInfo(url, { timeoutMs: 15000 }).catch(() => null);
-    return { filePath: outPath, title: info?.title || "audio", sizeBytes: size, format: ext };
+    const stdout = await runAttempts(url, common, attempts, base, Date.now() + (opts.timeoutMs || DEFAULT_TIMEOUT_MS));
+    return collect(base, stdout, "audio");
   } catch (err) {
-    cleanup(outPath);
+    removeFamily(base);
     if (err.message?.startsWith("yt-dlp reported") || err.message?.startsWith("yt-dlp is not")) throw err;
     const e = new Error(classifyError(err));
     e.cause = err;

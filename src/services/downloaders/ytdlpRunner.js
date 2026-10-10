@@ -115,6 +115,10 @@ function buildArgs(flags = {}) {
 }
 
 /**
+ * Run yt-dlp. Resolves with stdout; rejects with an Error carrying
+ * .stderr, .exitCode and .timedOut (read by ytdlp.js classifyError).
+ */
+/**
  * Accept either a Netscape cookies.txt or a Cookie-Editor-style JSON export
  * (array of {domain,path,secure,expirationDate,name,value,...}); JSON is
  * converted to a Netscape file in storage/tmp so yt-dlp can read it.
@@ -188,13 +192,12 @@ function globalFlags() {
   if (process.env.YTDLP_PROXY) f.proxy = process.env.YTDLP_PROXY;
   const js = process.env.YTDLP_JS_RUNTIME || "node";       // YouTube extraction needs a JS runtime; "off" disables
   if (js !== "off") f.jsRuntimes = js;
+  const ffLoc = require("./ffmpegCheck").location();       // bundled ffmpeg + ffprobe folder (null when the host has its own)
+  if (ffLoc) f.ffmpegLocation = ffLoc;
+  if (process.env.YTDLP_EXTRACTOR_ARGS) f.extractorArgs = process.env.YTDLP_EXTRACTOR_ARGS; // e.g. "youtube:player_client=mweb"
   return f;
 }
 
-/**
- * Run yt-dlp. Resolves with stdout; rejects with an Error carrying
- * .stderr, .exitCode and .timedOut (read by ytdlp.js classifyError).
- */
 async function exec(url, flags = {}, { timeout = 120000 } = {}) {
   const cmd = await ensureBinary();
   if (!cmd) throw new Error("yt-dlp is not available on this host.");
@@ -210,6 +213,11 @@ async function exec(url, flags = {}, { timeout = 120000 } = {}) {
     child.on("error", (e) => { clearTimeout(timer); reject(Object.assign(e, { stderr: err })); });
     child.on("close", (code) => {
       clearTimeout(timer);
+      // yt-dlp SKIPS a file over --max-filesize and still exits 0 — that is a failure for us, with a clear reason
+      if (code === 0 && /larger than max-filesize/i.test(err + out)) {
+        const e = new Error("File is larger than max-filesize"); e.stderr = err + out; e.exitCode = 0;
+        return reject(e);
+      }
       if (code === 0 && !timedOut && !overflow) return resolve(out);
       const e = new Error(timedOut ? "yt-dlp timed out" : overflow ? "yt-dlp output too large" : (err.trim().split("\n").pop() || `yt-dlp exited with code ${code}`));
       e.stderr = err; e.exitCode = code; e.timedOut = timedOut;
@@ -224,4 +232,27 @@ async function json(url, flags, opts) {
   return JSON.parse(await exec(url, flags, opts));
 }
 
-module.exports = { findCookiesFile, prepareCookies, ensureBinary, exec, json, buildArgs, standaloneAsset, BIN_DIR };
+/** yt-dlp's own version string, or null. */
+async function version() {
+  const cmd = await ensureBinary();
+  if (!cmd) return null;
+  return new Promise((resolve) => {
+    try { require("child_process").execFile(cmd, ["--version"], { timeout: 15000 }, (err, out) => resolve(err ? null : String(out).trim())); } catch { resolve(null); }
+  });
+}
+
+/** What the cookies setup looks like (counts only — never the values). */
+function cookieSummary() {
+  const file = findCookiesFile();
+  if (!file) return null;
+  const converted = prepareCookies(file);
+  if (!converted) return { file, error: true };
+  try {
+    const lines = fs.readFileSync(converted, "utf8").split("\n").filter((l) => l && (!l.startsWith("#") || l.startsWith("#HttpOnly_")));
+    const names = new Set(lines.map((l) => l.split("\t")[5]));
+    const domains = [...new Set(lines.map((l) => l.split("\t")[0].replace(/^#HttpOnly_/, "").replace(/^\./, "")))];
+    return { file, count: lines.length, domains: domains.slice(0, 8), login: AUTH_COOKIES.some((n) => names.has(n)) };
+  } catch { return { file, error: true }; }
+}
+
+module.exports = { version, cookieSummary, findCookiesFile, prepareCookies, ensureBinary, exec, json, buildArgs, standaloneAsset, BIN_DIR };
