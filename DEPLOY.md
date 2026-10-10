@@ -131,3 +131,9 @@ For users who want full control and better performance.
 
 *Need help? Contact the developers or check the [GitHub Issues](https://github.com/your-username/VORTE-PRO/issues).*
 
+
+## 🌐 Session ID site (pairing page)
+
+- **Wrong code?** A new code for the same number can be requested at any time (short pause between requests, `PAIRING_COOLDOWN_MS`). An unfinished pairing expires after `PAIRING_EXPIRE_MS` (default 10 min) and is counted as failed.
+- **Real counters** (visitors, successful / failed generations, uptime) are counted on the server and saved to `storage/site-stats.json`. Hosts that wipe the disk on redeploy start from zero again.
+- **Bot download button:** upload your ZIP as `files/VORTE-PRO.zip` (see `files/README.md`), or set `BOT_DOWNLOAD_URL` to a link. Never include `.env`, `session.txt`, or `storage/session` in that ZIP.

@@ -50,3 +50,7 @@ cookies.json
 # SESSION_ID drop-in file (contains your login) — NEVER commit
 session.txt
 session_id.txt
+
+# Site counters (generated at runtime)
+storage/site-stats.json
+storage/site-stats.json.tmp

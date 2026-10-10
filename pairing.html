@@ -315,6 +315,48 @@ code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(0,0,
   .nav-wrap{padding:0 16px}
   .brand-name{font-size:12px}
 }
+
+/* ── Country picker (searchable, all countries; in-flow so it never clips on phones) ── */
+.cc{position:relative}
+.cc-btn{width:100%;display:flex;align-items:center;gap:10px;height:46px;padding:0 14px;background:var(--surf2);border:1px solid var(--bor);color:var(--t);border-radius:8px;cursor:pointer;font:500 14px 'DM Sans',sans-serif;text-align:left;transition:border-color .22s,box-shadow .22s}
+.cc-btn:hover,.cc-btn[aria-expanded=true]{border-color:var(--teal)}
+.cc-btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--td)}
+.cc-iso{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal);border:1px solid rgba(0,229,200,.4);border-radius:5px;padding:2px 6px;flex-shrink:0;min-width:28px;text-align:center}
+.cc-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-dial{font-family:'JetBrains Mono',monospace;color:var(--teal);font-size:13px;flex-shrink:0}
+.cc-chev{color:var(--t3);transition:transform .2s;flex-shrink:0}
+.cc-btn[aria-expanded=true] .cc-chev{transform:rotate(180deg)}
+.cc-panel{margin-top:8px;background:#060a18;border:1px solid var(--bor2);border-radius:12px;padding:8px}
+.cc-panel .fi{font-size:16px}
+.cc-meta{font-size:11px;color:var(--t2);padding:8px 6px 4px}
+.cc-list{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.cc-it{display:flex;align-items:center;gap:10px;padding:11px 8px;border-radius:8px;cursor:pointer;font-size:14px}
+.cc-it:hover,.cc-it.on{background:var(--td)}
+.cc-it.sel .cc-name{color:var(--teal)}
+.cc-note{font-size:11px;color:var(--t2);margin-left:6px}
+.cc-empty{padding:16px 8px;font-size:13px;color:var(--t2)}
+.cc-prefix{display:flex;align-items:center;justify-content:center;width:auto;min-width:78px;font-family:'JetBrains Mono',monospace;color:var(--teal);cursor:default}
+/* ── New-code box (panel 2) ── */
+.retry{border:1px dashed var(--bor2);border-radius:14px;padding:14px;margin:14px 0;background:rgba(0,229,200,.04)}
+.retry-hd{font-weight:600;font-size:14px;color:var(--t)}
+.retry-tx{font-size:12px;color:var(--t2);margin:6px 0 12px;line-height:1.5}
+.retry-btn{height:48px}
+.retry-btn.pulse{animation:retryPulse 1.4s ease-in-out infinite}
+@keyframes retryPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,200,.35)}50%{box-shadow:0 0 0 8px rgba(0,229,200,0)}}
+.retry-note{font-size:11px;color:var(--t2);margin-top:8px;text-align:center}
+/* ── Bot download ── */
+.dl-card{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px dashed var(--bor2);border-radius:14px;padding:14px;margin:0 0 16px;background:rgba(0,229,200,.04)}
+.dl-ic{width:42px;height:42px;border-radius:10px;border:1px solid var(--bor2);display:flex;align-items:center;justify-content:center;color:var(--teal);flex-shrink:0;background:var(--surf2)}
+.dl-tx{flex:1;min-width:150px;font-size:13px;line-height:1.4}
+.dl-tx b{display:block;color:var(--t)}
+.dl-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2)}
+.dl-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 16px;border-radius:10px;border:1px solid var(--teal);background:var(--td);color:var(--teal);font:600 13px 'DM Sans',sans-serif;text-decoration:none;cursor:pointer;transition:background .2s,transform .2s;width:100%}
+.dl-link:hover{background:var(--tg)}
+.dl-link.off{opacity:.45;cursor:not-allowed;border-color:var(--bor2);pointer-events:none}
+.dl-note{font-size:11px;color:var(--t2);width:100%;text-align:center}
+/* ── Footer ── */
+.gh{display:inline-flex;align-items:center;justify-content:center;color:var(--t2);margin-left:2px;transition:color .2s,transform .2s}
+.gh:hover{color:var(--teal);transform:translateY(-1px)}
 </style>
 </head>
 
@@ -341,7 +383,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(0,0,
       </div>
       <div class="brand-txt">
         <span class="brand-name">VORTE PRO</span>
-        <span class="brand-ver">v2.0</span>
+        <span class="brand-ver" id="brandVer">v1.0</span>
       </div>
     </div>
 
@@ -384,7 +426,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(0,0,
     <div class="hero-tags">
       <span class="htag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span data-i18n="b1">Secure</span></span>
       <span class="htag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span data-i18n="b2">Fast</span></span>
-      <span class="htag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span data-i18n="b3">150+ Countries</span></span>
+      <span class="htag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span data-i18n="b3">240+ Countries</span></span>
       <span class="htag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span data-i18n="b4">Live Status</span></span>
     </div>
   </div>
@@ -445,28 +487,23 @@ code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(0,0,
         <div class="phd"><div class="ptitle" data-i18n="p1t">IDENTIFY</div><div class="psub" data-i18n="p1s">Enter your WhatsApp number to receive a pairing code and generate your Session ID.</div></div>
         <div class="field">
           <label class="flbl" data-i18n="sLbl">Search Country</label>
-          <div class="iw"><svg class="ii" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="fi" id="countrySearch" placeholder="Type country name..." oninput="filterCountries(this.value)"/></div>
+          <div class="cc" id="ccWrap">
+            <button type="button" class="cc-btn" id="ccBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="ccPanel" onclick="toggleCC()">
+              <span class="cc-iso" id="ccIso">TZ</span><span class="cc-name" id="ccName">Tanzania</span><span class="cc-dial" id="ccDial">+255</span>
+              <svg class="cc-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="cc-panel" id="ccPanel" hidden>
+              <div class="iw"><svg class="ii" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="fi" id="countrySearch" placeholder="Search country or code (e.g. tanz, 255, +44)" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="search" oninput="filterCountries(this.value)" onkeydown="ccKey(event)"/></div>
+              <div class="cc-meta" id="ccMeta"></div>
+              <ul class="cc-list" id="ccList" role="listbox"></ul>
+            </div>
+            <input type="hidden" id="countryCode" value="255"/>
+          </div>
         </div>
         <div class="field">
           <label class="flbl" data-i18n="pLbl">WhatsApp Number</label>
           <div class="phone-row">
-            <select class="fsel" id="countryCode">
-              <optgroup label="Africa">
-                <option value="255" selected>+255 TZ</option><option value="27">+27 ZA</option><option value="20">+20 EG</option><option value="234">+234 NG</option><option value="254">+254 KE</option><option value="233">+233 GH</option><option value="251">+251 ET</option><option value="256">+256 UG</option><option value="250">+250 RW</option><option value="260">+260 ZM</option><option value="263">+263 ZW</option><option value="212">+212 MA</option><option value="213">+213 DZ</option><option value="216">+216 TN</option><option value="218">+218 LY</option><option value="249">+249 SD</option><option value="252">+252 SO</option><option value="253">+253 DJ</option><option value="258">+258 MZ</option><option value="261">+261 MG</option><option value="264">+264 NA</option><option value="265">+265 MW</option><option value="267">+267 BW</option><option value="268">+268 SZ</option><option value="237">+237 CM</option><option value="221">+221 SN</option><option value="225">+225 CI</option><option value="226">+226 BF</option><option value="227">+227 NE</option><option value="228">+228 TG</option><option value="229">+229 BJ</option><option value="220">+220 GM</option><option value="222">+222 MR</option><option value="223">+223 ML</option><option value="224">+224 GN</option><option value="232">+232 SL</option><option value="231">+231 LR</option><option value="241">+241 GA</option><option value="242">+242 CG</option><option value="243">+243 CD</option><option value="244">+244 AO</option><option value="257">+257 BI</option><option value="291">+291 ER</option>
-              </optgroup>
-              <optgroup label="Asia">
-                <option value="91">+91 IN</option><option value="92">+92 PK</option><option value="880">+880 BD</option><option value="94">+94 LK</option><option value="95">+95 MM</option><option value="977">+977 NP</option><option value="62">+62 ID</option><option value="63">+63 PH</option><option value="60">+60 MY</option><option value="65">+65 SG</option><option value="66">+66 TH</option><option value="84">+84 VN</option><option value="86">+86 CN</option><option value="81">+81 JP</option><option value="82">+82 KR</option><option value="852">+852 HK</option><option value="886">+886 TW</option><option value="966">+966 SA</option><option value="971">+971 AE</option><option value="962">+962 JO</option><option value="964">+964 IQ</option><option value="965">+965 KW</option><option value="968">+968 OM</option><option value="974">+974 QA</option><option value="973">+973 BH</option><option value="967">+967 YE</option><option value="972">+972 IL</option><option value="90">+90 TR</option><option value="7">+7 RU</option><option value="998">+998 UZ</option><option value="994">+994 AZ</option><option value="374">+374 AM</option>
-              </optgroup>
-              <optgroup label="Europe">
-                <option value="44">+44 GB</option><option value="49">+49 DE</option><option value="33">+33 FR</option><option value="39">+39 IT</option><option value="34">+34 ES</option><option value="31">+31 NL</option><option value="41">+41 CH</option><option value="46">+46 SE</option><option value="47">+47 NO</option><option value="45">+45 DK</option><option value="358">+358 FI</option><option value="351">+351 PT</option><option value="30">+30 GR</option><option value="48">+48 PL</option><option value="380">+380 UA</option><option value="353">+353 IE</option>
-              </optgroup>
-              <optgroup label="Americas">
-                <option value="1">+1 US/CA</option><option value="55">+55 BR</option><option value="52">+52 MX</option><option value="54">+54 AR</option><option value="57">+57 CO</option><option value="56">+56 CL</option><option value="58">+58 VE</option><option value="593">+593 EC</option>
-              </optgroup>
-              <optgroup label="Oceania">
-                <option value="61">+61 AU</option><option value="64">+64 NZ</option><option value="679">+679 FJ</option>
-              </optgroup>
-            </select>
+            <div class="fsel cc-prefix" id="ccPrefix">+255</div>
             <div class="iw ph-iw">
               <svg class="ii" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11.5 19.79 19.79 0 0 1 1.61 2.84 2 2 0 0 1 3.6.66h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.24a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               <input class="fi ph-fi" id="phoneInput" type="tel" placeholder="712 345 678" maxlength="13" autocomplete="tel"/>
@@ -507,6 +544,16 @@ code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(0,0,
           <div class="wait-txt"><b data-i18n="wt">Waiting for WhatsApp...</b><br><span data-i18n="ws">Session ID will appear automatically once connected.</span></div>
         </div>
         <div class="aerr" id="e2"></div>
+        <div class="retry" id="retryBox">
+          <div class="retry-hd">Typed it wrong? Code expired?</div>
+          <div class="retry-tx">Request a fresh code for the same number, any time. The old code is cancelled instantly, so you are never stuck on "pairing in progress".</div>
+          <button type="button" class="btn-gen retry-btn" id="retryBtn" onclick="requestNewCode()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span id="retryTxt">Request new code</span>
+            <div class="btn-loader" id="retryLoader"><div class="lspin"></div><span>Requesting...</span></div>
+          </button>
+          <div class="retry-note">A short pause between requests protects your number from WhatsApp limits.</div>
+        </div>
         <button class="btn-ghost" onclick="goBack()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg><span data-i18n="back">Different number</span></button>
       </div>
 
@@ -527,6 +574,12 @@ code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(0,0,
           <div class="dc"><div class="dc-n">03</div><div class="dc-t" data-i18n="d3">Set <code>OWNER_1</code> to your number then <b>Deploy</b></div></div>
           <div class="dc"><div class="dc-n">04</div><div class="dc-t" data-i18n="d4">Send <code>.menu</code> to your bot — it's live!</div></div>
         </div>
+        <div class="dl-card">
+          <div class="dl-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+          <div class="dl-tx"><b>Get the bot files</b><span class="dl-meta">VORTE PRO</span></div>
+          <a class="dl-link off" href="/download/bot" download aria-disabled="true"><span class="dl-t">Download bot file</span></a>
+          <div class="dl-note">Contains no secrets. Deploy it, then set <code>SESSION_ID</code>.</div>
+        </div>
         <button class="btn-ghost" onclick="resetAll()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg><span data-i18n="newSess">Generate new session</span></button>
       </div>
     </div><!-- /gen-card -->
@@ -536,12 +589,20 @@ code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(0,0,
       <div class="side-block">
         <div class="side-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Connection Status</div>
         <div class="crows">
-          <div class="cr"><span class="ck">Protocol</span><span class="cv blue">Baileys v6</span></div>
+          <div class="cr"><span class="ck">Bot</span><span class="cv blue" id="sideBot">VORTE PRO v1.0</span></div>
+          <div class="cr"><span class="ck">Protocol</span><span class="cv blue" id="sideBaileys">Baileys --</span></div>
           <div class="cr"><span class="ck">Encryption</span><span class="cv blue">BASE64</span></div>
           <div class="cr"><span class="ck">Region</span><span class="cv">Global</span></div>
           <div class="cr"><span class="ck">Active Sessions</span><span class="cv" id="sideAct">0</span></div>
           <div class="cr"><span class="ck">Server</span><span class="cv green" id="sideSrv">Online</span></div>
           <div class="cr"><span class="ck">Uptime</span><span class="cv" id="sideUp">--</span></div>
+        </div>
+      </div>
+      <div class="side-block">
+        <div class="side-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Bot Files</div>
+        <div class="dl-card" style="margin:0">
+          <div class="dl-tx"><b>VORTE PRO bot</b><span class="dl-meta">checking...</span></div>
+          <a class="dl-link off" href="/download/bot" download aria-disabled="true"><span class="dl-t">Download bot file</span></a>
         </div>
       </div>
       <div class="side-block">
@@ -582,7 +643,7 @@ code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(0,0,
 <footer class="footer">
   <div class="foot-wrap">
     <div class="foot-brand"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>VORTE PRO</div>
-    <div class="foot-links"><span>© 2025 VORTE PRO</span><span class="fsep">·</span><span>Keep Session ID private</span><span class="fsep">·</span><span>Each session is unique</span></div>
+    <div class="foot-links"><span>© 2026 VORTE PRO</span><span class="fsep">·</span><span>Created by SAID HUSSEIN</span><a class="gh" href="https://github.com/abudharyally48-cloud" target="_blank" rel="noopener noreferrer" aria-label="SAID HUSSEIN on GitHub" title="GitHub"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a><span class="fsep">·</span><span>Keep Session ID private</span><span class="fsep">·</span><span>Each session is unique</span></div>
   </div>
 </footer>
 
@@ -598,7 +659,7 @@ const API = '';
 /* ── State ── */
 let lang = 'en', token = null, pollInt = null, timerInt = null;
 let sessionId = null, currentCode = null;
-let stats = { visitors: 0, success: 0, fail: 0 };
+let lastPhone = null, cdTimer = null;   // last number requested (for "Request new code")
 
 /* ============================================================
    SOUND ENGINE (Web Audio API — zero external files)
@@ -651,14 +712,14 @@ function playSound(type) {
    TRANSLATIONS
 ============================================================ */
 const T = {
-  en:{chip:'Secure · Fast · Encrypted',h1a:'WhatsApp Session',h1b:'Generator',heroP:'Generate your Session ID in seconds. Deploy your bot anywhere, instantly.',b1:'Secure',b2:'Fast',b3:'150+ Countries',b4:'Live Status',statHdr:'Live Dashboard',stVl:'Total Visitors',stSl:'Successful Generations',stFl:'Failed Attempts',stUl:'Server Uptime',genHdr:'Session Generator',s1:'Identify',s2:'Verify',s3:'Deploy',p1t:'IDENTIFY',p1s:'Enter your WhatsApp number to receive a pairing code and generate your unique Session ID.',sLbl:'Search Country',pLbl:'WhatsApp Number',genBtn:'Generate Pair Code',p2t:'AUTHENTICATE',p2s:'Enter this code in WhatsApp. Your Session ID will appear automatically.',codeLbl:'Pairing Code',howHdr:'How to enter the code',h1:'Open <b>WhatsApp</b> on your phone',h2:'Tap <b>Menu → Linked Devices</b>',h3:'Tap <b>Link a Device</b>',h4:'Tap <b>"Link with phone number"</b>',h5:'Type the code shown above exactly',wt:'Waiting for WhatsApp...',ws:'Session ID will appear automatically once connected.',back:'Different number',p3t:'SESSION ID READY',p3s:'Copy your Session ID. Keep it private — it contains your WhatsApp credentials.',copy:'Copy',d1:'Deploy <b>VORTE PRO</b> to Heroku, Railway, or Render',d3:'Set <code>OWNER_1</code> to your number then <b>Deploy</b>',d4:'Send <code>.menu</code> to your bot — it\'s live!',newSess:'Generate new session',consHdr:'Live Console'},
-  sw:{chip:'Salama · Haraka · Imesimbwa',h1a:'Kikao cha WhatsApp',h1b:'Jenesha',heroP:'Pata Session ID yako kwa sekunde chache.',b1:'Salama',b2:'Haraka',b3:'Nchi 150+',b4:'Hali ya Moja kwa Moja',statHdr:'Dashibodi',stVl:'Wageni Wote',stSl:'Vizazi Vilivyofanikiwa',stFl:'Majaribio Yaliyoshindwa',stUl:'Wakati wa Mtandao',genHdr:'Kizazi cha Kikao',s1:'Tambua',s2:'Thibitisha',s3:'Weka',p1t:'TAMBUA',p1s:'Weka namba yako ya WhatsApp kupata msimbo wa kuoanisha.',sLbl:'Tafuta Nchi',pLbl:'Namba ya WhatsApp',genBtn:'Pata Msimbo',p2t:'THIBITISHA',p2s:'Weka msimbo huu katika WhatsApp.',codeLbl:'Msimbo wa Kuoanisha',howHdr:'Jinsi ya kuweka msimbo',h1:'Fungua <b>WhatsApp</b>',h2:'Gonga <b>Menyu → Vifaa Vilivyounganishwa</b>',h3:'Gonga <b>Unganisha Kifaa</b>',h4:'Gonga <b>"Unganisha na namba ya simu"</b>',h5:'Andika msimbo uliooonyeshwa',wt:'Inasubiri WhatsApp...',ws:'Session ID itaonekana moja kwa moja.',back:'Namba nyingine',p3t:'KIKAO TAYARI',p3s:'Nakili Session ID yako. Hifadhi kwa siri.',copy:'Nakili',d1:'Weka <b>VORTE PRO</b> kwenye Heroku au Render',d3:'Weka <code>OWNER_1</code> namba yako',d4:'Tuma <code>.menu</code> kwa bot yako',newSess:'Tengeneza kikao kipya',consHdr:'Konsoli ya Moja kwa Moja'},
-  ar:{chip:'آمن · سريع · مشفّر',h1a:'جلسة واتساب',h1b:'المولّد',heroP:'أنشئ معرف جلستك في ثوانٍ.',b1:'آمن',b2:'سريع',b3:'150+ دولة',b4:'حالة مباشرة',statHdr:'لوحة المعلومات',stVl:'الزوار الكلي',stSl:'التوليدات الناجحة',stFl:'المحاولات الفاشلة',stUl:'وقت التشغيل',genHdr:'مولّد الجلسة',s1:'تحديد',s2:'مصادقة',s3:'نشر',p1t:'تحديد',p1s:'أدخل رقم واتساب للحصول على رمز الإقران.',sLbl:'ابحث عن دولة',pLbl:'رقم واتساب',genBtn:'إنشاء رمز الإقران',p2t:'مصادقة',p2s:'أدخل هذا الرمز في واتساب.',codeLbl:'رمز الإقران',howHdr:'كيفية إدخال الرمز',h1:'افتح <b>واتساب</b>',h2:'اضغط <b>القائمة → الأجهزة المرتبطة</b>',h3:'اضغط <b>ربط جهاز</b>',h4:'اضغط <b>"الربط برقم الهاتف"</b>',h5:'اكتب الرمز أعلاه',wt:'في انتظار واتساب...',ws:'سيظهر معرف جلستك تلقائياً.',back:'رقم آخر',p3t:'الجلسة جاهزة',p3s:'انسخ معرف جلستك. احتفظ به سراً.',copy:'نسخ',d1:'انشر <b>VORTE PRO</b> على Heroku أو Render',d3:'اضبط <code>OWNER_1</code>',d4:'أرسل <code>.menu</code> لبوتك',newSess:'إنشاء جلسة جديدة',consHdr:'وحدة التحكم المباشرة'},
-  fr:{chip:'Sécurisé · Rapide · Chiffré',h1a:'Session WhatsApp',h1b:'Générateur',heroP:'Générez votre Session ID en quelques secondes.',b1:'Sécurisé',b2:'Rapide',b3:'150+ pays',b4:'Statut en direct',statHdr:'Tableau de bord',stVl:'Visiteurs',stSl:'Générations réussies',stFl:'Tentatives échouées',stUl:'Temps de fonctionnement',genHdr:'Générateur de session',s1:'Identifier',s2:'Vérifier',s3:'Déployer',p1t:'IDENTIFIER',p1s:'Entrez votre numéro WhatsApp pour recevoir un code.',sLbl:'Rechercher un pays',pLbl:'Numéro WhatsApp',genBtn:'Générer le code',p2t:'AUTHENTIFIER',p2s:'Tapez ce code dans WhatsApp.',codeLbl:'Code de jumelage',howHdr:'Comment entrer le code',h1:'Ouvrez <b>WhatsApp</b>',h2:'Appuyez sur <b>Menu → Appareils liés</b>',h3:'Appuyez sur <b>Lier un appareil</b>',h4:'Appuyez sur <b>"Lier avec un numéro"</b>',h5:'Tapez le code exactement',wt:'En attente de WhatsApp...',ws:"Le Session ID apparaîtra automatiquement.",back:'Numéro différent',p3t:'SESSION PRÊTE',p3s:'Copiez votre Session ID. Gardez-le privé.',copy:'Copier',d1:'Déployez <b>VORTE PRO</b> sur Heroku ou Render',d3:'Définissez <code>OWNER_1</code>',d4:'Envoyez <code>.menu</code> à votre bot',newSess:'Nouvelle session',consHdr:'Console en direct'},
-  pt:{chip:'Seguro · Rápido · Criptografado',h1a:'Sessão WhatsApp',h1b:'Gerador',heroP:'Gere seu Session ID em segundos.',b1:'Seguro',b2:'Rápido',b3:'150+ países',b4:'Status ao vivo',statHdr:'Painel',stVl:'Visitantes',stSl:'Gerações bem-sucedidas',stFl:'Tentativas falhas',stUl:'Tempo de atividade',genHdr:'Gerador de sessão',s1:'Identificar',s2:'Verificar',s3:'Implantar',p1t:'IDENTIFICAR',p1s:'Digite seu número WhatsApp para receber um código.',sLbl:'Pesquisar País',pLbl:'Número WhatsApp',genBtn:'Gerar Código',p2t:'AUTENTICAR',p2s:'Digite este código no WhatsApp.',codeLbl:'Código de emparelhamento',howHdr:'Como digitar o código',h1:'Abra o <b>WhatsApp</b>',h2:'Toque em <b>Menu → Dispositivos Vinculados</b>',h3:'Toque em <b>Vincular Dispositivo</b>',h4:'Toque em <b>"Vincular com número"</b>',h5:'Digite o código exatamente',wt:'Aguardando WhatsApp...',ws:'O Session ID aparecerá automaticamente.',back:'Número diferente',p3t:'SESSÃO PRONTA',p3s:'Copie seu Session ID. Mantenha-o privado.',copy:'Copiar',d1:'Implante <b>VORTE PRO</b> no Heroku ou Render',d3:'Defina <code>OWNER_1</code>',d4:'Envie <code>.menu</code> ao seu bot',newSess:'Nova sessão',consHdr:'Console ao vivo'},
-  hi:{chip:'सुरक्षित · तेज़ · एन्क्रिप्टेड',h1a:'WhatsApp सेशन',h1b:'जेनरेटर',heroP:'सेकंड में Session ID पाएं।',b1:'सुरक्षित',b2:'तेज़',b3:'150+ देश',b4:'लाइव स्टेटस',statHdr:'डैशबोर्ड',stVl:'कुल विज़िटर',stSl:'सफल जेनरेशन',stFl:'असफल प्रयास',stUl:'सर्वर अपटाइम',genHdr:'सेशन जेनरेटर',s1:'पहचानें',s2:'सत्यापन',s3:'तैनात',p1t:'पहचानें',p1s:'पेयरिंग कोड पाने के लिए नंबर दर्ज करें।',sLbl:'देश खोजें',pLbl:'WhatsApp नंबर',genBtn:'पेयर कोड जेनरेट करें',p2t:'प्रमाणित करें',p2s:'यह कोड WhatsApp में टाइप करें।',codeLbl:'पेयरिंग कोड',howHdr:'कोड कैसे दर्ज करें',h1:'<b>WhatsApp</b> खोलें',h2:'<b>मेनू → लिंक्ड डिवाइसेज</b> पर टैप करें',h3:'<b>डिवाइस लिंक करें</b> पर टैप करें',h4:'<b>"फोन नंबर से लिंक"</b> पर टैप करें',h5:'ऊपर का कोड टाइप करें',wt:'WhatsApp का इंतज़ार...',ws:'Session ID अपने आप दिखेगा।',back:'दूसरा नंबर',p3t:'SESSION तैयार',p3s:'Session ID कॉपी करें। प्राइवेट रखें।',copy:'कॉपी',d1:'<b>VORTE PRO</b> को Heroku या Render पर डिप्लॉय करें',d3:'<code>OWNER_1</code> सेट करें',d4:'बॉट को <code>.menu</code> भेजें',newSess:'नया session',consHdr:'लाइव कंसोल'},
-  id:{chip:'Aman · Cepat · Terenkripsi',h1a:'Sesi WhatsApp',h1b:'Generator',heroP:'Buat Session ID Anda dalam hitungan detik.',b1:'Aman',b2:'Cepat',b3:'150+ Negara',b4:'Status Langsung',statHdr:'Dasbor',stVl:'Total Pengunjung',stSl:'Pembuatan Berhasil',stFl:'Percobaan Gagal',stUl:'Uptime Server',genHdr:'Generator Sesi',s1:'Identifikasi',s2:'Verifikasi',s3:'Deploy',p1t:'IDENTIFIKASI',p1s:'Masukkan nomor WhatsApp untuk menerima kode.',sLbl:'Cari Negara',pLbl:'Nomor WhatsApp',genBtn:'Buat Kode',p2t:'AUTENTIKASI',p2s:'Ketik kode ini di WhatsApp.',codeLbl:'Kode Penghubung',howHdr:'Cara memasukkan kode',h1:'Buka <b>WhatsApp</b>',h2:'Ketuk <b>Menu → Perangkat Tertaut</b>',h3:'Ketuk <b>Tautkan Perangkat</b>',h4:'Ketuk <b>"Tautkan dengan nomor"</b>',h5:'Ketik kode di atas persis',wt:'Menunggu WhatsApp...',ws:'Session ID akan muncul otomatis.',back:'Nomor lain',p3t:'SESI SIAP',p3s:'Salin Session ID. Jaga kerahasiaannya.',copy:'Salin',d1:'Deploy <b>VORTE PRO</b> ke Heroku atau Render',d3:'Atur <code>OWNER_1</code>',d4:'Kirim <code>.menu</code> ke bot',newSess:'Sesi baru',consHdr:'Konsol Langsung'},
-  tr:{chip:'Güvenli · Hızlı · Şifreli',h1a:'WhatsApp Oturumu',h1b:'Oluşturucu',heroP:"Session ID'nizi saniyeler içinde oluşturun.",b1:'Güvenli',b2:'Hızlı',b3:'150+ Ülke',b4:'Canlı Durum',statHdr:'Gösterge Paneli',stVl:'Toplam Ziyaretçi',stSl:'Başarılı Üretimler',stFl:'Başarısız Denemeler',stUl:'Sunucu Çalışma Süresi',genHdr:'Oturum Oluşturucu',s1:'Tanı',s2:'Doğrula',s3:'Dağıt',p1t:'TANI',p1s:'Eşleştirme kodu almak için numaranı gir.',sLbl:'Ülke Ara',pLbl:'WhatsApp Numarası',genBtn:'Kod Oluştur',p2t:'KİMLİK DOĞRULA',p2s:"Bu kodu WhatsApp'a yaz.",codeLbl:'Eşleştirme Kodu',howHdr:'Kodu nasıl gireceğin',h1:"<b>WhatsApp</b>'ı aç",h2:"<b>Menü → Bağlı Cihazlar</b>'a dokun",h3:"<b>Cihaz Bağla</b>'ya dokun",h4:"<b>'Numara ile bağla'</b>'ya dokun",h5:'Kodu tam olarak yaz',wt:'WhatsApp bekleniyor...',ws:'Session ID otomatik görünecek.',back:'Farklı numara',p3t:'OTURUM HAZIR',p3s:"Session ID'ni kopyala. Gizli tut.",copy:'Kopyala',d1:"<b>VORTE PRO</b>'yu Heroku veya Render'e dağıt",d3:"<code>OWNER_1</code>'i ayarla",d4:'Bota <code>.menu</code> gönder',newSess:'Yeni oturum',consHdr:'Canlı Konsol'}
+  en:{chip:'Secure · Fast · Encrypted',h1a:'WhatsApp Session',h1b:'Generator',heroP:'Generate your Session ID in seconds. Deploy your bot anywhere, instantly.',b1:'Secure',b2:'Fast',b3:'240+ Countries',b4:'Live Status',statHdr:'Live Dashboard',stVl:'Total Visitors',stSl:'Successful Generations',stFl:'Failed Attempts',stUl:'Server Uptime',genHdr:'Session Generator',s1:'Identify',s2:'Verify',s3:'Deploy',p1t:'IDENTIFY',p1s:'Enter your WhatsApp number to receive a pairing code and generate your unique Session ID.',sLbl:'Search Country',pLbl:'WhatsApp Number',genBtn:'Generate Pair Code',p2t:'AUTHENTICATE',p2s:'Enter this code in WhatsApp. Your Session ID will appear automatically.',codeLbl:'Pairing Code',howHdr:'How to enter the code',h1:'Open <b>WhatsApp</b> on your phone',h2:'Tap <b>Menu → Linked Devices</b>',h3:'Tap <b>Link a Device</b>',h4:'Tap <b>"Link with phone number"</b>',h5:'Type the code shown above exactly',wt:'Waiting for WhatsApp...',ws:'Session ID will appear automatically once connected.',back:'Different number',p3t:'SESSION ID READY',p3s:'Copy your Session ID. Keep it private — it contains your WhatsApp credentials.',copy:'Copy',d1:'Deploy <b>VORTE PRO</b> to Heroku, Railway, or Render',d3:'Set <code>OWNER_1</code> to your number then <b>Deploy</b>',d4:'Send <code>.menu</code> to your bot — it\'s live!',newSess:'Generate new session',consHdr:'Live Console'},
+  sw:{chip:'Salama · Haraka · Imesimbwa',h1a:'Kikao cha WhatsApp',h1b:'Jenesha',heroP:'Pata Session ID yako kwa sekunde chache.',b1:'Salama',b2:'Haraka',b3:'Nchi 240+',b4:'Hali ya Moja kwa Moja',statHdr:'Dashibodi',stVl:'Wageni Wote',stSl:'Vizazi Vilivyofanikiwa',stFl:'Majaribio Yaliyoshindwa',stUl:'Wakati wa Mtandao',genHdr:'Kizazi cha Kikao',s1:'Tambua',s2:'Thibitisha',s3:'Weka',p1t:'TAMBUA',p1s:'Weka namba yako ya WhatsApp kupata msimbo wa kuoanisha.',sLbl:'Tafuta Nchi',pLbl:'Namba ya WhatsApp',genBtn:'Pata Msimbo',p2t:'THIBITISHA',p2s:'Weka msimbo huu katika WhatsApp.',codeLbl:'Msimbo wa Kuoanisha',howHdr:'Jinsi ya kuweka msimbo',h1:'Fungua <b>WhatsApp</b>',h2:'Gonga <b>Menyu → Vifaa Vilivyounganishwa</b>',h3:'Gonga <b>Unganisha Kifaa</b>',h4:'Gonga <b>"Unganisha na namba ya simu"</b>',h5:'Andika msimbo uliooonyeshwa',wt:'Inasubiri WhatsApp...',ws:'Session ID itaonekana moja kwa moja.',back:'Namba nyingine',p3t:'KIKAO TAYARI',p3s:'Nakili Session ID yako. Hifadhi kwa siri.',copy:'Nakili',d1:'Weka <b>VORTE PRO</b> kwenye Heroku au Render',d3:'Weka <code>OWNER_1</code> namba yako',d4:'Tuma <code>.menu</code> kwa bot yako',newSess:'Tengeneza kikao kipya',consHdr:'Konsoli ya Moja kwa Moja'},
+  ar:{chip:'آمن · سريع · مشفّر',h1a:'جلسة واتساب',h1b:'المولّد',heroP:'أنشئ معرف جلستك في ثوانٍ.',b1:'آمن',b2:'سريع',b3:'240+ دولة',b4:'حالة مباشرة',statHdr:'لوحة المعلومات',stVl:'الزوار الكلي',stSl:'التوليدات الناجحة',stFl:'المحاولات الفاشلة',stUl:'وقت التشغيل',genHdr:'مولّد الجلسة',s1:'تحديد',s2:'مصادقة',s3:'نشر',p1t:'تحديد',p1s:'أدخل رقم واتساب للحصول على رمز الإقران.',sLbl:'ابحث عن دولة',pLbl:'رقم واتساب',genBtn:'إنشاء رمز الإقران',p2t:'مصادقة',p2s:'أدخل هذا الرمز في واتساب.',codeLbl:'رمز الإقران',howHdr:'كيفية إدخال الرمز',h1:'افتح <b>واتساب</b>',h2:'اضغط <b>القائمة → الأجهزة المرتبطة</b>',h3:'اضغط <b>ربط جهاز</b>',h4:'اضغط <b>"الربط برقم الهاتف"</b>',h5:'اكتب الرمز أعلاه',wt:'في انتظار واتساب...',ws:'سيظهر معرف جلستك تلقائياً.',back:'رقم آخر',p3t:'الجلسة جاهزة',p3s:'انسخ معرف جلستك. احتفظ به سراً.',copy:'نسخ',d1:'انشر <b>VORTE PRO</b> على Heroku أو Render',d3:'اضبط <code>OWNER_1</code>',d4:'أرسل <code>.menu</code> لبوتك',newSess:'إنشاء جلسة جديدة',consHdr:'وحدة التحكم المباشرة'},
+  fr:{chip:'Sécurisé · Rapide · Chiffré',h1a:'Session WhatsApp',h1b:'Générateur',heroP:'Générez votre Session ID en quelques secondes.',b1:'Sécurisé',b2:'Rapide',b3:'240+ pays',b4:'Statut en direct',statHdr:'Tableau de bord',stVl:'Visiteurs',stSl:'Générations réussies',stFl:'Tentatives échouées',stUl:'Temps de fonctionnement',genHdr:'Générateur de session',s1:'Identifier',s2:'Vérifier',s3:'Déployer',p1t:'IDENTIFIER',p1s:'Entrez votre numéro WhatsApp pour recevoir un code.',sLbl:'Rechercher un pays',pLbl:'Numéro WhatsApp',genBtn:'Générer le code',p2t:'AUTHENTIFIER',p2s:'Tapez ce code dans WhatsApp.',codeLbl:'Code de jumelage',howHdr:'Comment entrer le code',h1:'Ouvrez <b>WhatsApp</b>',h2:'Appuyez sur <b>Menu → Appareils liés</b>',h3:'Appuyez sur <b>Lier un appareil</b>',h4:'Appuyez sur <b>"Lier avec un numéro"</b>',h5:'Tapez le code exactement',wt:'En attente de WhatsApp...',ws:"Le Session ID apparaîtra automatiquement.",back:'Numéro différent',p3t:'SESSION PRÊTE',p3s:'Copiez votre Session ID. Gardez-le privé.',copy:'Copier',d1:'Déployez <b>VORTE PRO</b> sur Heroku ou Render',d3:'Définissez <code>OWNER_1</code>',d4:'Envoyez <code>.menu</code> à votre bot',newSess:'Nouvelle session',consHdr:'Console en direct'},
+  pt:{chip:'Seguro · Rápido · Criptografado',h1a:'Sessão WhatsApp',h1b:'Gerador',heroP:'Gere seu Session ID em segundos.',b1:'Seguro',b2:'Rápido',b3:'240+ países',b4:'Status ao vivo',statHdr:'Painel',stVl:'Visitantes',stSl:'Gerações bem-sucedidas',stFl:'Tentativas falhas',stUl:'Tempo de atividade',genHdr:'Gerador de sessão',s1:'Identificar',s2:'Verificar',s3:'Implantar',p1t:'IDENTIFICAR',p1s:'Digite seu número WhatsApp para receber um código.',sLbl:'Pesquisar País',pLbl:'Número WhatsApp',genBtn:'Gerar Código',p2t:'AUTENTICAR',p2s:'Digite este código no WhatsApp.',codeLbl:'Código de emparelhamento',howHdr:'Como digitar o código',h1:'Abra o <b>WhatsApp</b>',h2:'Toque em <b>Menu → Dispositivos Vinculados</b>',h3:'Toque em <b>Vincular Dispositivo</b>',h4:'Toque em <b>"Vincular com número"</b>',h5:'Digite o código exatamente',wt:'Aguardando WhatsApp...',ws:'O Session ID aparecerá automaticamente.',back:'Número diferente',p3t:'SESSÃO PRONTA',p3s:'Copie seu Session ID. Mantenha-o privado.',copy:'Copiar',d1:'Implante <b>VORTE PRO</b> no Heroku ou Render',d3:'Defina <code>OWNER_1</code>',d4:'Envie <code>.menu</code> ao seu bot',newSess:'Nova sessão',consHdr:'Console ao vivo'},
+  hi:{chip:'सुरक्षित · तेज़ · एन्क्रिप्टेड',h1a:'WhatsApp सेशन',h1b:'जेनरेटर',heroP:'सेकंड में Session ID पाएं।',b1:'सुरक्षित',b2:'तेज़',b3:'240+ देश',b4:'लाइव स्टेटस',statHdr:'डैशबोर्ड',stVl:'कुल विज़िटर',stSl:'सफल जेनरेशन',stFl:'असफल प्रयास',stUl:'सर्वर अपटाइम',genHdr:'सेशन जेनरेटर',s1:'पहचानें',s2:'सत्यापन',s3:'तैनात',p1t:'पहचानें',p1s:'पेयरिंग कोड पाने के लिए नंबर दर्ज करें।',sLbl:'देश खोजें',pLbl:'WhatsApp नंबर',genBtn:'पेयर कोड जेनरेट करें',p2t:'प्रमाणित करें',p2s:'यह कोड WhatsApp में टाइप करें।',codeLbl:'पेयरिंग कोड',howHdr:'कोड कैसे दर्ज करें',h1:'<b>WhatsApp</b> खोलें',h2:'<b>मेनू → लिंक्ड डिवाइसेज</b> पर टैप करें',h3:'<b>डिवाइस लिंक करें</b> पर टैप करें',h4:'<b>"फोन नंबर से लिंक"</b> पर टैप करें',h5:'ऊपर का कोड टाइप करें',wt:'WhatsApp का इंतज़ार...',ws:'Session ID अपने आप दिखेगा।',back:'दूसरा नंबर',p3t:'SESSION तैयार',p3s:'Session ID कॉपी करें। प्राइवेट रखें।',copy:'कॉपी',d1:'<b>VORTE PRO</b> को Heroku या Render पर डिप्लॉय करें',d3:'<code>OWNER_1</code> सेट करें',d4:'बॉट को <code>.menu</code> भेजें',newSess:'नया session',consHdr:'लाइव कंसोल'},
+  id:{chip:'Aman · Cepat · Terenkripsi',h1a:'Sesi WhatsApp',h1b:'Generator',heroP:'Buat Session ID Anda dalam hitungan detik.',b1:'Aman',b2:'Cepat',b3:'240+ Negara',b4:'Status Langsung',statHdr:'Dasbor',stVl:'Total Pengunjung',stSl:'Pembuatan Berhasil',stFl:'Percobaan Gagal',stUl:'Uptime Server',genHdr:'Generator Sesi',s1:'Identifikasi',s2:'Verifikasi',s3:'Deploy',p1t:'IDENTIFIKASI',p1s:'Masukkan nomor WhatsApp untuk menerima kode.',sLbl:'Cari Negara',pLbl:'Nomor WhatsApp',genBtn:'Buat Kode',p2t:'AUTENTIKASI',p2s:'Ketik kode ini di WhatsApp.',codeLbl:'Kode Penghubung',howHdr:'Cara memasukkan kode',h1:'Buka <b>WhatsApp</b>',h2:'Ketuk <b>Menu → Perangkat Tertaut</b>',h3:'Ketuk <b>Tautkan Perangkat</b>',h4:'Ketuk <b>"Tautkan dengan nomor"</b>',h5:'Ketik kode di atas persis',wt:'Menunggu WhatsApp...',ws:'Session ID akan muncul otomatis.',back:'Nomor lain',p3t:'SESI SIAP',p3s:'Salin Session ID. Jaga kerahasiaannya.',copy:'Salin',d1:'Deploy <b>VORTE PRO</b> ke Heroku atau Render',d3:'Atur <code>OWNER_1</code>',d4:'Kirim <code>.menu</code> ke bot',newSess:'Sesi baru',consHdr:'Konsol Langsung'},
+  tr:{chip:'Güvenli · Hızlı · Şifreli',h1a:'WhatsApp Oturumu',h1b:'Oluşturucu',heroP:"Session ID'nizi saniyeler içinde oluşturun.",b1:'Güvenli',b2:'Hızlı',b3:'240+ Ülke',b4:'Canlı Durum',statHdr:'Gösterge Paneli',stVl:'Toplam Ziyaretçi',stSl:'Başarılı Üretimler',stFl:'Başarısız Denemeler',stUl:'Sunucu Çalışma Süresi',genHdr:'Oturum Oluşturucu',s1:'Tanı',s2:'Doğrula',s3:'Dağıt',p1t:'TANI',p1s:'Eşleştirme kodu almak için numaranı gir.',sLbl:'Ülke Ara',pLbl:'WhatsApp Numarası',genBtn:'Kod Oluştur',p2t:'KİMLİK DOĞRULA',p2s:"Bu kodu WhatsApp'a yaz.",codeLbl:'Eşleştirme Kodu',howHdr:'Kodu nasıl gireceğin',h1:"<b>WhatsApp</b>'ı aç",h2:"<b>Menü → Bağlı Cihazlar</b>'a dokun",h3:"<b>Cihaz Bağla</b>'ya dokun",h4:"<b>'Numara ile bağla'</b>'ya dokun",h5:'Kodu tam olarak yaz',wt:'WhatsApp bekleniyor...',ws:'Session ID otomatik görünecek.',back:'Farklı numara',p3t:'OTURUM HAZIR',p3s:"Session ID'ni kopyala. Gizli tut.",copy:'Kopyala',d1:"<b>VORTE PRO</b>'yu Heroku veya Render'e dağıt",d3:"<code>OWNER_1</code>'i ayarla",d4:'Bota <code>.menu</code> gönder',newSess:'Yeni oturum',consHdr:'Canlı Konsol'}
 };
 
 function setLang(l) {
@@ -701,11 +762,337 @@ function closeMenu() {
 /* ============================================================
    COUNTRY FILTER
 ============================================================ */
-function filterCountries(q) {
-  Array.from(document.getElementById('countryCode').options).forEach(o => {
-    o.style.display = o.text.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
-  });
+/* ============================================================
+   COUNTRY PICKER — every country, search by name OR dial code
+   (custom list: <option> hiding does not work on most phone browsers)
+============================================================ */
+const CC_RAW = `AF|Afghanistan|93
+AX|Åland Islands|358|||aland
+AL|Albania|355
+DZ|Algeria|213
+AS|American Samoa|1|684
+AD|Andorra|376
+AO|Angola|244
+AI|Anguilla|1|264
+AQ|Antarctica|672
+AG|Antigua and Barbuda|1|268
+AR|Argentina|54
+AM|Armenia|374
+AW|Aruba|297
+AC|Ascension Island|247
+AU|Australia|61
+AT|Austria|43
+AZ|Azerbaijan|994
+BS|Bahamas|1|242
+BH|Bahrain|973
+BD|Bangladesh|880
+BB|Barbados|1|246
+BY|Belarus|375
+BE|Belgium|32
+BZ|Belize|501
+BJ|Benin|229
+BM|Bermuda|1|441
+BT|Bhutan|975
+BO|Bolivia|591
+BQ|Bonaire, Sint Eustatius and Saba|599||caribbean netherlands
+BA|Bosnia and Herzegovina|387
+BW|Botswana|267
+BR|Brazil|55||brasil
+IO|British Indian Ocean Territory|246
+VG|British Virgin Islands|1|284
+BN|Brunei|673
+BG|Bulgaria|359
+BF|Burkina Faso|226
+BI|Burundi|257
+KH|Cambodia|855
+CM|Cameroon|237
+CA|Canada|1
+CV|Cape Verde|238||cabo verde
+KY|Cayman Islands|1|345
+CF|Central African Republic|236
+TD|Chad|235
+CL|Chile|56
+CN|China|86
+CX|Christmas Island|61
+CC|Cocos (Keeling) Islands|61
+CO|Colombia|57
+KM|Comoros|269
+CG|Congo (Republic)|242||brazzaville congo
+CD|Congo (DR Congo)|243||kinshasa drc democratic republic
+CK|Cook Islands|682
+CR|Costa Rica|506
+CI|Côte d'Ivoire|225||ivory coast
+HR|Croatia|385
+CU|Cuba|53
+CW|Curaçao|599||curacao
+CY|Cyprus|357
+CZ|Czech Republic|420||czechia
+DK|Denmark|45
+DJ|Djibouti|253
+DM|Dominica|1|767
+DO|Dominican Republic|1|809/829/849
+EC|Ecuador|593
+EG|Egypt|20
+SV|El Salvador|503
+GQ|Equatorial Guinea|240
+ER|Eritrea|291
+EE|Estonia|372
+SZ|Eswatini|268||swaziland
+ET|Ethiopia|251
+FK|Falkland Islands|500||malvinas
+FO|Faroe Islands|298
+FJ|Fiji|679
+FI|Finland|358
+FR|France|33
+GF|French Guiana|594
+PF|French Polynesia|689||tahiti
+GA|Gabon|241
+GM|Gambia|220
+GE|Georgia|995
+DE|Germany|49||deutschland
+GH|Ghana|233
+GI|Gibraltar|350
+GR|Greece|30
+GL|Greenland|299
+GD|Grenada|1|473
+GP|Guadeloupe|590
+GU|Guam|1|671
+GT|Guatemala|502
+GG|Guernsey|44
+GN|Guinea|224
+GW|Guinea-Bissau|245
+GY|Guyana|592
+HT|Haiti|509
+HN|Honduras|504
+HK|Hong Kong|852
+HU|Hungary|36
+IS|Iceland|354
+IN|India|91
+ID|Indonesia|62
+IR|Iran|98
+IQ|Iraq|964
+IE|Ireland|353
+IM|Isle of Man|44
+IL|Israel|972
+IT|Italy|39||italia
+JM|Jamaica|1|876
+JP|Japan|81
+JE|Jersey|44
+JO|Jordan|962
+KZ|Kazakhstan|7
+KE|Kenya|254
+KI|Kiribati|686
+XK|Kosovo|383
+KW|Kuwait|965
+KG|Kyrgyzstan|996
+LA|Laos|856
+LV|Latvia|371
+LB|Lebanon|961
+LS|Lesotho|266
+LR|Liberia|231
+LY|Libya|218
+LI|Liechtenstein|423
+LT|Lithuania|370
+LU|Luxembourg|352
+MO|Macau|853||macao
+MG|Madagascar|261
+MW|Malawi|265
+MY|Malaysia|60
+MV|Maldives|960
+ML|Mali|223
+MT|Malta|356
+MH|Marshall Islands|692
+MQ|Martinique|596
+MR|Mauritania|222
+MU|Mauritius|230
+YT|Mayotte|262
+MX|Mexico|52
+FM|Micronesia|691
+MD|Moldova|373
+MC|Monaco|377
+MN|Mongolia|976
+ME|Montenegro|382
+MS|Montserrat|1|664
+MA|Morocco|212
+MZ|Mozambique|258
+MM|Myanmar|95||burma
+NA|Namibia|264
+NR|Nauru|674
+NP|Nepal|977
+NL|Netherlands|31||holland
+NC|New Caledonia|687
+NZ|New Zealand|64
+NI|Nicaragua|505
+NE|Niger|227
+NG|Nigeria|234
+NU|Niue|683
+NF|Norfolk Island|672
+KP|North Korea|850||korea dprk
+MK|North Macedonia|389||macedonia
+MP|Northern Mariana Islands|1|670
+NO|Norway|47
+OM|Oman|968
+PK|Pakistan|92
+PW|Palau|680
+PS|Palestine|970||gaza west bank
+PA|Panama|507
+PG|Papua New Guinea|675
+PY|Paraguay|595
+PE|Peru|51
+PH|Philippines|63
+PL|Poland|48
+PT|Portugal|351
+PR|Puerto Rico|1|787/939
+QA|Qatar|974
+RE|Réunion|262||reunion
+RO|Romania|40
+RU|Russia|7||russian federation
+RW|Rwanda|250
+BL|Saint Barthélemy|590||st barts
+SH|Saint Helena|290||st helena
+KN|Saint Kitts and Nevis|1|869||st kitts
+LC|Saint Lucia|1|758||st lucia
+MF|Saint Martin|590||st martin
+PM|Saint Pierre and Miquelon|508
+VC|Saint Vincent and the Grenadines|1|784||st vincent
+WS|Samoa|685
+SM|San Marino|378
+ST|São Tomé and Príncipe|239||sao tome
+SA|Saudi Arabia|966||ksa
+SN|Senegal|221
+RS|Serbia|381
+SC|Seychelles|248
+SL|Sierra Leone|232
+SG|Singapore|65
+SX|Sint Maarten|1|721
+SK|Slovakia|421
+SI|Slovenia|386
+SB|Solomon Islands|677
+SO|Somalia|252
+ZA|South Africa|27||rsa
+KR|South Korea|82||korea republic
+SS|South Sudan|211
+ES|Spain|34||espana
+LK|Sri Lanka|94
+SD|Sudan|249
+SR|Suriname|597
+SJ|Svalbard and Jan Mayen|47
+SE|Sweden|46
+CH|Switzerland|41
+SY|Syria|963
+TW|Taiwan|886
+TJ|Tajikistan|992
+TZ|Tanzania|255
+TH|Thailand|66
+TL|Timor-Leste|670||east timor
+TG|Togo|228
+TK|Tokelau|690
+TO|Tonga|676
+TT|Trinidad and Tobago|1|868
+TA|Tristan da Cunha|290
+TN|Tunisia|216
+TR|Turkey|90||turkiye
+TM|Turkmenistan|993
+TC|Turks and Caicos Islands|1|649
+TV|Tuvalu|688
+UG|Uganda|256
+UA|Ukraine|380
+AE|United Arab Emirates|971||uae emirates dubai abu dhabi
+GB|United Kingdom|44||uk england scotland wales britain
+US|United States|1||usa america
+UY|Uruguay|598
+VI|US Virgin Islands|1|340
+UZ|Uzbekistan|998
+VU|Vanuatu|678
+VA|Vatican City|39||holy see
+VE|Venezuela|58
+VN|Vietnam|84||viet nam
+WF|Wallis and Futuna|681
+EH|Western Sahara|212
+YE|Yemen|967
+ZM|Zambia|260
+ZW|Zimbabwe|263`;
+const normQ = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+const COUNTRIES = CC_RAW.split('\n').map(l => {
+  const [iso, name, dial, note = '', alt = ''] = l.split('|');
+  return { iso, name, dial, note, areas: note ? note.split('/') : [], key: normQ(name + ' ' + alt) };
+});
+let ccSel = COUNTRIES.find(c => c.iso === 'TZ'), ccShown = [], ccActive = -1;
+
+function ccDialText(c) { return '+' + c.dial + (c.note ? ' · ' + c.note : ''); }
+
+function ccSearch(q) {
+  const raw = String(q || '').trim();
+  if (!raw) return COUNTRIES;
+  const digits = raw.replace(/^\+/, '').replace(/[\s-]/g, '');
+  if (/^\d+$/.test(digits)) {                       // searching by CODE NUMBER: 255, +255, 1242 ...
+    const exact = [], starts = [], area = [];
+    for (const c of COUNTRIES) {
+      if (c.dial === digits) exact.push(c);
+      else if (c.dial.startsWith(digits)) starts.push(c);
+      else if (c.areas.some(a => (c.dial + a).startsWith(digits) || a.startsWith(digits))) area.push(c);
+    }
+    return [...exact, ...starts, ...area];
+  }
+  const n = normQ(raw), out = [];                   // searching by NAME (or ISO code like "tz")
+  for (const c of COUNTRIES) {
+    let r = -1;
+    const words = c.key.split(/[\s,()-]+/);
+    if (c.iso.toLowerCase() === n) r = 0;
+    else if (words.includes(n)) r = 1;            // whole word / alias: "uk", "usa", "korea"
+    else if (c.key.startsWith(n)) r = 2;
+    else if (words.some(w => w.startsWith(n))) r = 3;
+    else if (c.key.includes(n)) r = 4;
+    if (r >= 0) out.push([r, c]);
+  }
+  return out.sort((a, b) => a[0] - b[0]).map(x => x[1]);
 }
+
+function renderCC(list) {
+  ccShown = list; ccActive = list.length ? Math.max(0, list.indexOf(ccSel)) : -1;
+  const ul = document.getElementById('ccList');
+  document.getElementById('ccMeta').textContent = list.length === COUNTRIES.length
+    ? COUNTRIES.length + ' countries and territories · type a name or a dial code'
+    : list.length + (list.length === 1 ? ' match' : ' matches');
+  ul.innerHTML = list.length ? list.map((c, i) =>
+    `<li class="cc-it${c === ccSel ? ' sel' : ''}${i === ccActive ? ' on' : ''}" role="option" data-i="${i}" aria-selected="${c === ccSel}"><span class="cc-iso">${c.iso}</span><span class="cc-name">${c.name}</span><span class="cc-dial">+${c.dial}</span>${c.note ? `<span class="cc-note">${c.note}</span>` : ''}</li>`).join('')
+    : '<li class="cc-empty">No country matches. Try a different name or code.</li>';
+  const on = ul.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+}
+function filterCountries(q) { renderCC(ccSearch(q)); }
+
+function toggleCC(force) {
+  const panel = document.getElementById('ccPanel'), btn = document.getElementById('ccBtn');
+  const open = force === undefined ? panel.hidden : force;
+  panel.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+  if (open) {
+    const inp = document.getElementById('countrySearch'); inp.value = ''; renderCC(COUNTRIES);
+    setTimeout(() => inp.focus(), 30);
+  }
+}
+function selectCountry(i) {
+  const c = ccShown[i]; if (!c) return;
+  ccSel = c;
+  document.getElementById('countryCode').value = c.dial;
+  document.getElementById('ccIso').textContent = c.iso;
+  document.getElementById('ccName').textContent = c.name;
+  document.getElementById('ccDial').textContent = '+' + c.dial;
+  document.getElementById('ccPrefix').textContent = '+' + c.dial;
+  toggleCC(false);
+  playSound('click');
+  document.getElementById('phoneInput').focus();
+}
+function ccKey(e) {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault(); if (!ccShown.length) return;
+    ccActive = (ccActive + (e.key === 'ArrowDown' ? 1 : -1) + ccShown.length) % ccShown.length;
+    document.querySelectorAll('#ccList .cc-it').forEach((li, i) => li.classList.toggle('on', i === ccActive));
+    const on = document.querySelector('#ccList .on'); if (on) on.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') { e.preventDefault(); if (ccActive >= 0) selectCountry(ccActive); }
+  else if (e.key === 'Escape') { toggleCC(false); document.getElementById('ccBtn').focus(); }
+}
+document.getElementById('ccList').addEventListener('click', e => { const li = e.target.closest('.cc-it'); if (li) selectCountry(+li.dataset.i); });
+document.addEventListener('click', e => { if (!document.getElementById('ccWrap').contains(e.target)) toggleCC(false); });
 
 /* ============================================================
    STEP NAVIGATION
@@ -750,8 +1137,7 @@ async function requestCode() {
   btn.disabled = true;
   loader.classList.add('show');
 
-  stats.visitors++;
-  updateStats();
+  lastPhone = { cc, num };
   clog('warn', 'Initiating session for +' + cc + num);
   clog('info', 'Connecting to WhatsApp servers...');
 
@@ -763,7 +1149,6 @@ async function requestCode() {
     });
     const data = await res.json();
     if (!data.success) {
-      stats.fail++; updateStats();
       showErr('e1', data.error || 'Failed to generate code. Try again.');
       clog('error', 'Code generation failed: ' + (data.error || 'Unknown'));
       playSound('error');
@@ -774,15 +1159,67 @@ async function requestCode() {
     renderCode(data.code);
     goToStep(2);
     startPoll();
+    startCooldown(5);
     clog('success', 'Pairing code generated: ' + data.code);
     clog('info', 'Waiting for WhatsApp authentication...');
   } catch (e) {
-    stats.fail++; updateStats();
     showErr('e1', 'Cannot connect to server. Please try again.');
     clog('error', 'Server connection failed: ' + e.message);
     playSound('error');
   } finally {
     btn.disabled = false;
+    loader.classList.remove('show');
+  }
+}
+
+/* ============================================================
+   REQUEST A NEW CODE (same number, any time)
+============================================================ */
+function startCooldown(sec) {
+  const btn = document.getElementById('retryBtn'), txt = document.getElementById('retryTxt');
+  clearInterval(cdTimer);
+  let left = sec;
+  btn.disabled = true;
+  const tick = () => {
+    if (left <= 0) { clearInterval(cdTimer); btn.disabled = false; txt.textContent = 'Request new code'; return; }
+    txt.textContent = 'New code in ' + left + 's'; left--;
+  };
+  tick(); cdTimer = setInterval(tick, 1000);
+}
+
+async function requestNewCode() {
+  if (!lastPhone) { goBack(); return; }
+  const btn = document.getElementById('retryBtn'), loader = document.getElementById('retryLoader');
+  if (btn.disabled) return;
+  hideErr('e2'); playSound('click');
+  btn.disabled = true; loader.classList.add('show');
+  clog('warn', 'Requesting a new pairing code for +' + lastPhone.cc + lastPhone.num);
+  try {
+    const res = await fetch(API + '/api/request-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: lastPhone.cc + lastPhone.num })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      showErr('e2', data.error || 'Could not get a new code. Please try again.');
+      clog('error', 'New code failed: ' + (data.error || 'Unknown'));
+      playSound('error');
+      startCooldown(data.retryAfter || 5);
+      return;
+    }
+    token = data.token; currentCode = data.code;
+    renderCode(data.code);
+    startPoll();
+    showToast('New pairing code ready');
+    clog('success', 'New pairing code generated: ' + data.code);
+    startCooldown(5);
+  } catch (e) {
+    showErr('e2', 'Cannot connect to server. Please try again.');
+    clog('error', 'Server connection failed: ' + e.message);
+    playSound('error');
+    startCooldown(3);
+  } finally {
     loader.classList.remove('show');
   }
 }
@@ -794,6 +1231,7 @@ function renderCode(code) {
   const chunks = code.split('-');
   document.getElementById('codeChunks').innerHTML =
     chunks.map(c => `<div class="chunk">${c}</div>`).join('');
+  const rb = document.getElementById('retryBtn'); if (rb) rb.classList.remove('pulse');
   let secs = 60;
   const timerEl = document.getElementById('timerEl');
   const timerTxt = document.getElementById('timerTxt');
@@ -802,7 +1240,7 @@ function renderCode(code) {
     secs--;
     timerTxt.textContent = secs > 0 ? secs + 's' : 'Expired';
     timerEl.className = secs <= 15 ? 'ctimer urgent' : 'ctimer';
-    if (secs <= 0) { clearInterval(timerInt); clog('warn', 'Pairing code expired'); }
+    if (secs <= 0) { clearInterval(timerInt); clog('warn', 'Pairing code expired'); if (rb) rb.classList.add('pulse'); }
   }, 1000);
 }
 
@@ -841,7 +1279,7 @@ function startPoll() {
         clearInterval(pollInt);
         if (timerInt) clearInterval(timerInt);
         sessionId = data.sessionId;
-        stats.success++; updateStats();
+        fetchStats();
         typeReveal(data.sessionId);
         goToStep(3);
         playSound('success');
@@ -889,14 +1327,14 @@ async function doCopy(text) {
    NAVIGATION
 ============================================================ */
 function goBack() {
-  clearInterval(pollInt); clearInterval(timerInt);
+  clearInterval(pollInt); clearInterval(timerInt); clearInterval(cdTimer);
   token = null; currentCode = null; hideErr('e2'); goToStep(1);
   clog('info', 'Session reset — awaiting new number');
   playSound('click');
 }
 
 function resetAll() {
-  clearInterval(pollInt); clearInterval(timerInt);
+  clearInterval(pollInt); clearInterval(timerInt); clearInterval(cdTimer);
   token = null; sessionId = null; currentCode = null;
   document.getElementById('phoneInput').value = '';
   hideErr('e1'); goToStep(1);
@@ -956,58 +1394,74 @@ function animateNum(id, target) {
   }, 40);
 }
 
-function updateStats() {
-  animateNum('stV', stats.visitors);
-  animateNum('stS', stats.success);
-  animateNum('stF', stats.fail);
-  if (stats.visitors > 0) {
-    const pct = Math.round((stats.success / stats.visitors) * 100);
-    document.getElementById('stVT').textContent = '+' + stats.visitors;
-    document.getElementById('stST').textContent = '+' + pct + '%';
-    document.getElementById('stFT').textContent = stats.fail + '%';
-  }
+function fmtUptime(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
+  return d > 0 ? d + 'd ' + h + 'h' : h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+}
+function fmtUptimeLong(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
+  return (d > 0 ? d + 'd ' : '') + h + 'h ' + m + 'm';
+}
+const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+/* Everything below is REAL: counted on the server (/api/stats), nothing is simulated. */
+function applyStats(d) {
+  animateNum('stV', d.visitors || 0);
+  animateNum('stS', d.successful || 0);
+  animateNum('stF', d.failed || 0);
+  const total = (d.successful || 0) + (d.failed || 0);
+  setTxt('stVT', (d.pageViews || 0) + ' views');
+  setTxt('stST', total ? Math.round(d.successful / total * 100) + '% rate' : '--');
+  setTxt('stFT', total ? Math.round(d.failed / total * 100) + '%' : '0%');
+  setTxt('stU', fmtUptime(d.uptimeSeconds));
+  setTxt('sideUp', fmtUptimeLong(d.uptimeSeconds));
+  setTxt('sideAct', d.activePairings || 0);
+  if (d.botVersion) { setTxt('brandVer', d.botVersion); setTxt('sideBot', (d.botName || 'VORTE PRO') + ' ' + d.botVersion); }
+  if (d.baileysVersion) setTxt('sideBaileys', 'Baileys v' + d.baileysVersion);
+}
+function setOnline(on) {
+  document.getElementById('sBadge').className = on ? 'sbadge' : 'sbadge off';
+  document.getElementById('sDot').style.cssText = '';
+  setTxt('sTxt', on ? 'Online' : 'Offline');
+  const srv = document.getElementById('sideSrv');
+  srv.textContent = on ? 'Online' : 'Offline';
+  srv.className = on ? 'cv green' : 'cv';
+  srv.style.color = on ? '' : 'var(--red)';
 }
 
 /* ============================================================
-   SERVER HEALTH POLLING
+   SERVER STATS POLLING (also drives the Online/Offline badge)
 ============================================================ */
-async function fetchHealth() {
+async function fetchStats() {
   try {
-    const res = await fetch(API + '/health');
-    const d = await res.json();
-    const upSec = d.uptime || 0;
-    const upMin = Math.floor(upSec / 60);
-    const upHr = Math.floor(upMin / 60);
-    const upStr = upHr > 0 ? upHr + 'h ' + (upMin % 60) + 'm' : upMin + 'm';
-    document.getElementById('stU').textContent = upStr;
-    document.getElementById('sideUp').textContent = upStr;
-    document.getElementById('sideAct').textContent = d.activeSessions || 0;
-    // Set online status
-    document.getElementById('sBadge').className = 'sbadge';
-    document.getElementById('sDot').style.cssText = '';
-    document.getElementById('sTxt').textContent = 'Online';
-    document.getElementById('sideSrv').textContent = 'Online';
-    document.getElementById('sideSrv').className = 'cv green';
+    const res = await fetch(API + '/api/stats', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    applyStats(await res.json());
+    setOnline(true);
   } catch (e) {
-    document.getElementById('sBadge').classList.add('off');
-    document.getElementById('sTxt').textContent = 'Offline';
-    document.getElementById('sideSrv').textContent = 'Offline';
-    document.getElementById('sideSrv').className = 'cv';
-    document.getElementById('sideSrv').style.color = 'var(--red)';
+    setOnline(false);
+    throw e;
   }
 }
+const fetchHealth = fetchStats; // older name used by init
 
 /* ============================================================
-   SIMULATED VISITOR COUNTER (real-time feel)
+   BOT FILE DOWNLOAD (uploaded ZIP or external link)
 ============================================================ */
-function simulateActivity() {
-  // Slowly increment visitor count over time to feel alive
-  setInterval(() => {
-    if (Math.random() < 0.3) {
-      stats.visitors++;
-      updateStats();
-    }
-  }, 8000);
+function fmtSize(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
+async function fetchBotFile() {
+  try {
+    const d = await (await fetch(API + '/api/bot-file', { cache: 'no-store' })).json();
+    document.querySelectorAll('.dl-link').forEach(a => {
+      if (d.available) { a.href = API + '/download/bot'; a.classList.remove('off'); a.removeAttribute('aria-disabled'); a.querySelector('.dl-t').textContent = 'Download bot file'; }
+      else { a.removeAttribute('href'); a.classList.add('off'); a.setAttribute('aria-disabled', 'true'); a.querySelector('.dl-t').textContent = 'Not available yet'; }
+    });
+    document.querySelectorAll('.dl-meta').forEach(el => {
+      el.textContent = d.available ? 'VORTE PRO ' + (d.version || '') + (d.sizeBytes ? ' · ' + fmtSize(d.sizeBytes) : '') : 'File not uploaded yet';
+    });
+  } catch (e) { /* leave the buttons disabled */ }
 }
 
 /* ============================================================
@@ -1026,7 +1480,7 @@ document.getElementById('phoneInput').addEventListener('input', e => {
 (function init() {
   try {
     clog('dim', '────────────────────────────────');
-    clog('info', 'VORTE PRO Session Server v2.0');
+    clog('info', 'VORTE PRO Session Server v1.0');
     clog('dim', '────────────────────────────────');
     clog('info', 'Initializing dashboard...');
     clog('success', 'UI loaded successfully');
@@ -1039,15 +1493,8 @@ document.getElementById('phoneInput').addEventListener('input', e => {
       clog('error', 'Backend unreachable — check server');
     });
 
-    setInterval(fetchHealth, 15000);
-    simulateActivity();
-
-    setTimeout(() => {
-      stats.visitors = Math.floor(Math.random() * 40) + 10;
-      stats.success = Math.floor(stats.visitors * 0.75);
-      stats.fail = stats.visitors - stats.success;
-      updateStats();
-    }, 1200);
+    setInterval(() => fetchStats().catch(() => {}), 15000);
+    fetchBotFile();
   } catch(e) {
     console.error('Init error:', e);
   }
