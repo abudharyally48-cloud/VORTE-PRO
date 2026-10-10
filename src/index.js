@@ -54,6 +54,16 @@ async function main() {
     });
   
     console.log('✅ Bot initialization complete. Monitoring events...');
+
+    // Get the download tools ready in the background (yt-dlp binary, ffmpeg) so the first user doesn't wait for them.
+    if (process.env.DOWNLOAD_PREWARM !== 'false') {
+      const warm = setTimeout(() => {
+        const dl = require('./services/downloaders/ytdlp');
+        const ff = require('./services/downloaders/ffmpegCheck');
+        Promise.allSettled([dl.ensureBinary(), ff.ensureFfmpeg()]).catch(() => {});
+      }, 4000);
+      if (warm.unref) warm.unref();
+    }
   }
 }
 
