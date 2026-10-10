@@ -69,7 +69,8 @@ const CATEGORIES = [
   { title: "👑 OWNER", items: [
     { c: "sudo", a: ["eval"] }, { c: "addsudo", u: "<number>" }, { c: "delsudo", u: "<number>" }, { c: "listsudo" },
     { c: "update" }, { c: "restart" }, { c: "broadcast", u: "<msg>" }, { c: "join", u: "<invite link>" }, { c: "newgc", u: "<name> @users", a: ["creategroup"] },
-    { c: "tostatusgroup", u: "[color] <text> | attach/reply media", a: ["togroupstatus"] }
+    { c: "tostatusgroup", u: "[color] <text> | attach/reply media", a: ["togroupstatus"] },
+    { c: "dltest", u: "[link]  (why a download fails)", a: ["ytdebug"] }
   ] }
 ];
 

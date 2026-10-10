@@ -39,4 +39,10 @@ async function runDownload(sock, m, o) {
 
 const readFile = (p) => fs.readFileSync(p);
 
-module.exports = { runDownload, readFile, SEND_MAX_BYTES };
+/** WhatsApp wants the right mimetype for the file it is really getting. */
+const AUDIO_MIME = { mp3: "audio/mpeg", m4a: "audio/mp4", mp4: "audio/mp4", aac: "audio/aac", ogg: "audio/ogg; codecs=opus", opus: "audio/ogg; codecs=opus", webm: "audio/webm", wav: "audio/wav" };
+const VIDEO_MIME = { mp4: "video/mp4", webm: "video/webm", mkv: "video/x-matroska", mov: "video/quicktime", "3gp": "video/3gpp" };
+const audioMime = (ext) => AUDIO_MIME[String(ext || "").toLowerCase()] || "audio/mpeg";
+const videoMime = (ext) => VIDEO_MIME[String(ext || "").toLowerCase()] || "video/mp4";
+
+module.exports = { runDownload, readFile, audioMime, videoMime, SEND_MAX_BYTES };
