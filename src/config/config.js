@@ -9,8 +9,9 @@ const ownerDigits = ownerRaw.map((n) => n.replace(/[^0-9]/g, ''));
 module.exports = {
   // Bot Settings
   botName: process.env.BOT_NAME || "VORTE PRO",
-  prefix: process.env.PREFIX || ".",       // default/display prefix
-  prefixes: [...new Set([process.env.PREFIX || ".", ".", "!", "?", "$", "%", "&", "*"])], // every prefix users may type
+  // PREFIX like Queen Anita: "." | ".!*" (each character works) | "all" (any symbol, or none). Parsed ONLY by utils/prefix.js.
+  prefixSpec: process.env.PREFIX || ".",
+  prefix: (process.env.PREFIX && process.env.PREFIX.toLowerCase() !== "all" ? [...process.env.PREFIX.trim()][0] : null) || ".", // display only
 
   // Server Settings
   port: process.env.PORT || 20202,
