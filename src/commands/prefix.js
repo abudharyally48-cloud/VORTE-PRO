@@ -1,33 +1,58 @@
-// src/commands/prefix.js
-const helpers = require("../utils/helpers");
+// src/commands/prefix.js — view or change the command prefix (owner only). Rules live in utils/prefix.js.
+//   .prefix            show the current prefix
+//   .prefix !          only "!" works
+//   .prefix .!*        several prefixes: each character works
+//   .prefix all        any symbol works, and no prefix at all
+//   .prefix reset      back to the PREFIX setting (or ".")
+const prefixLib = require("../utils/prefix");
 const config = require("../config/config");
+const { panel } = require("../utils/ui");
+
+const TITLE = "🔣 PREFIX";
 
 module.exports = {
   name: "prefix",
   scope: "OWNER",
-  description: "Set an additional custom prefix on top of the defaults (owner only)",
+  description: "Show or change the command prefix (owner only): .prefix | .prefix .!* | .prefix all | .prefix reset",
   async execute(sock, m, args, getSettings, saveSettings) {
     const chat = m.key.remoteJid;
-    const sender = m.key.participant || m.key.remoteJid;
-    if (!helpers.isOwner(sender) && !m.key?.fromMe) return sock.sendMessage(chat, { text: "❌ Owner only command." });
-
-    const newPrefix = args[0];
-    if (!newPrefix) {
-      const settings = getSettings();
-      const custom = settings.global?.customPrefix;
-      return sock.sendMessage(chat, {
-        text: `Default prefixes: ${config.prefixes.join(" ")}${custom ? `\nCustom prefix: ${custom}` : ""}\n\nUsage: .prefix <symbol>`
-      });
-    }
-    if (newPrefix.length !== 1) {
-      return sock.sendMessage(chat, { text: "❌ Prefix must be a single character." });
-    }
-
     const settings = getSettings();
-    settings.global = settings.global || {};
-    settings.global.customPrefix = newPrefix;
-    saveSettings(settings);
+    const reply = (lines) => sock.sendMessage(chat, { text: panel(TITLE, lines) });
+    const arg = args.join(" ").trim();
 
-    await sock.sendMessage(chat, { text: `✅ Custom prefix set to "${newPrefix}" (default prefixes ${config.prefixes.join(" ")} still work too).` });
+    if (!arg) {
+      return reply([
+        `Current: ${prefixLib.headline(settings)}`,
+        "",
+        "Change it:",
+        ".prefix !          only !",
+        ".prefix .!*        each of . ! * works",
+        ".prefix all        any symbol, or none",
+        ".prefix reset      back to the default"
+      ]);
+    }
+
+    settings.global = settings.global || {};
+    if (arg.toLowerCase() === "reset") {
+      delete settings.global.prefix;
+      delete settings.global.customPrefix;
+      saveSettings(settings);
+      return reply(["✅ Prefix reset.", `Now: ${prefixLib.headline(settings)}`]);
+    }
+
+    const parsed = prefixLib.parse(arg);
+    if (parsed.error) return reply([`❌ ${parsed.error}`, "Examples: .prefix !   .prefix .!*   .prefix all"]);
+
+    settings.global.prefix = parsed.all ? "all" : parsed.chars.join("");
+    delete settings.global.customPrefix; // replaced by the new setting
+    saveSettings(settings);
+    const shown = prefixLib.display(settings);
+    return reply([
+      "✅ Prefix updated.",
+      `Now: ${prefixLib.headline(settings)}`,
+      "",
+      `Use it from now on, e.g. ${shown}menu`,
+      "If you ever lose it, send  .prefix reset"
+    ]);
   }
 };

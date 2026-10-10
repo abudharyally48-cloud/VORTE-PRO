@@ -3,6 +3,7 @@ const os = require("os");
 const fs = require("fs");
 const config = require("../config/config");
 const { buildMenuBody } = require("../utils/menuBuilder");
+const prefixLib = require("../utils/prefix");
 
 // Defaults so .setmenu2/.setmenu3 work out of the box, even before .setmenudisplay
 // or a custom .setmenu2/.setmenu3 <url> is run live on the bot.
@@ -30,8 +31,10 @@ module.exports = {
     let globalOwnerName;
     try { globalOwnerName = (getSettings?.() || {}).global?.ownerName; } catch (e) {}
     const ownerName = globalOwnerName || config.owners?.[0]?.[0] || "Not set";
-    const prefix = context?.prefix || config.prefix;
-    const allPrefixes = (config.prefixes || [config.prefix]).join(" ");
+    let liveSettings = {};
+    try { liveSettings = getSettings?.() || {}; } catch (e) {}
+    const prefix = context?.prefix || prefixLib.display(liveSettings);
+    const prefixLine = prefixLib.headline(liveSettings);
     const version = "1.0.0";
 
     const speed = `${(Math.random() * 0.5 + 0.1).toFixed(3)}s`;
@@ -51,7 +54,7 @@ module.exports = {
 ╚══════════════════════╝
 
 ➤ Owner   : ${ownerName}
-➤ Prefix  : ${prefix}  (also works: ${allPrefixes})
+➤ Prefix  : ${prefixLine}
 ➤ Version : ${version}
 ➤ Mode    : ${mode.toUpperCase()}
 ➤ Plugins : ${plugins}

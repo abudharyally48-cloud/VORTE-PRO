@@ -45,12 +45,12 @@ module.exports = {
     return {}; // antiedit: group admin in a group / owner in private — checked in execute()
   },
 
-  async execute(sock, m, args, getSettings, saveSettings) {
+  async execute(sock, m, args, getSettings, saveSettings, context) {
     const chat = m.key.remoteJid;
     const sender = m.key.participant || m.key.remoteJid;
     const isGroup = helpers.isGroup(chat);
-    const name = helpers.getBody(m).slice(1).split(/\s+/)[0].toLowerCase();
-    const prefix = helpers.getBody(m).charAt(0);
+    const name = context?.commandName || helpers.getBody(m).slice(1).split(/\s+/)[0].toLowerCase();
+    const prefix = ".";   // commands are written against "."; the real prefix is shown by utils/prefix.js
     const { key, value } = parse(name, args);
     const settings = getSettings();
     const reply = (text, extra = {}) => sock.sendMessage(chat, { text, ...extra });
