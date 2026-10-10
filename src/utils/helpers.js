@@ -138,19 +138,6 @@ async function getPermissions(sock, m) {
 }
 
 /**
- * Check if a message body starts with any supported prefix, and return
- * which one matched. Centralizes multi-prefix support so it's defined
- * in exactly one place rather than duplicated per file.
- * @param {string} body
- * @returns {string|null} the matched prefix, or null if none matched
- */
-function matchPrefix(body, extraPrefixes = []) {
-  if (!body) return null;
-  const prefixes = [...(config.prefixes || [config.prefix]), ...extraPrefixes];
-  return prefixes.find(p => body.startsWith(p)) || null;
-}
-
-/**
  * Reliably extract the text body of a message. Baileys messages do not have
  * a top-level `m.body` — that was a bug present in several command files
  * (fun.js, hangman.js, quiz.js, tools.js, imageai.js), silently breaking
@@ -180,6 +167,5 @@ module.exports = {
   isAdmin,
   isBotAdmin,
   getPermissions,
-  matchPrefix,
   getBody
 };

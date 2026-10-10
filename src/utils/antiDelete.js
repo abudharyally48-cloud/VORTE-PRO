@@ -83,7 +83,7 @@ if (sweeper.unref) sweeper.unref();
  */
 async function remember(sock, m, settings, { download = defaultDownload } = {}) {
   const id = m?.key?.id;
-  if (!id) return;
+  if (!id || !automation.chatKind(m.key.remoteJid)) return; // status / broadcast / newsletter are never kept
   const c = describeContent(m.message);
   messageCache.store(id, {
     chat: m.key.remoteJid,
@@ -129,7 +129,17 @@ function ignoreReason(key, cached) {
   return null;
 }
 
-const ownerJids = () => [config.owner1, config.owner2].filter(Boolean).map((n) => `${n}@s.whatsapp.net`);
+/**
+ * Where recovered messages go: OWNER_1 / OWNER_2. If none is configured (e.g. the host has no way to set
+ * the variable) they go to the bot account's own chat ("You"), which is the owner's phone when the bot
+ * is linked to the owner's own WhatsApp.
+ */
+function ownerJids(sock) {
+  const owners = [config.owner1, config.owner2].filter(Boolean).map((n) => `${n}@s.whatsapp.net`);
+  if (owners.length) return owners;
+  const self = sock?.user?.id;
+  return self ? [`${self.split(":")[0].split("@")[0]}@s.whatsapp.net`] : [];
+}
 
 function formatTime(ts, tz = process.env.TZ) {
   try { return new Date(ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", ...(tz ? { timeZone: tz } : {}) }); }
@@ -150,10 +160,10 @@ async function handleDelete(sock, update, settings) {
   if (!enabled(settings)) return { sent: false, reason: "disabled" };
   const cached = messageCache.get(key.id);
   const why = ignoreReason(key, cached);
-  if (why) return { sent: false, reason: why };
+  if (why) { if (why !== "not a normal chat (status/broadcast/newsletter)") console.log(`🗑️ antidelete: not reported (${why})`); return { sent: false, reason: why }; }
 
-  const owners = ownerJids();
-  if (!owners.length) { console.error("⚠️ antidelete: no OWNER_1 configured, nowhere to send recovered messages"); return { sent: false, reason: "no owner" }; }
+  const owners = ownerJids(sock);
+  if (!owners.length) { console.error("⚠️ antidelete: no owner and no bot account known, nowhere to send recovered messages"); return { sent: false, reason: "no owner" }; }
 
   const isGroup = key.remoteJid.endsWith("@g.us");
   let chatName = "Private Chat";
@@ -195,6 +205,7 @@ async function handleDelete(sock, update, settings) {
     }
   }
   drop(key.id);
+  console.log(delivered ? `🗑️ antidelete: recovered a deleted ${saved ? saved.kind : cached.kind || "message"} and sent it to ${owners.length} owner chat(s)` : "🗑️ antidelete: delivery failed");
   return { sent: delivered, reason: delivered ? undefined : "delivery failed" };
 }
 
