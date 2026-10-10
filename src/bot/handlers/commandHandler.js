@@ -4,6 +4,7 @@ const path = require('path');
 const config = require('../../config/config');
 const helpers = require('../../utils/helpers');
 const access = require('../../utils/access');
+const prefixLib = require('../../utils/prefix');
 
 class CommandHandler {
   constructor() {
@@ -36,6 +37,12 @@ class CommandHandler {
     console.log(`✅ Loaded ${this.commands.size} commands (including aliases)`);
   }
 
+  /** Every command name and alias (used to show the real prefix in replies). */
+  names() {
+    if (!this._names || this._names.size !== this.commands.size) this._names = new Set(this.commands.keys());
+    return this._names;
+  }
+
   getCommandCount() {
     return this.commands.size;
   }
@@ -47,16 +54,20 @@ class CommandHandler {
 
   async handle(sock, m, body, getSettings, saveSettings) {
     const settingsSnapshot = getSettings?.() || {};
-    const customPrefix = settingsSnapshot.global?.customPrefix;
-    const matchedPrefix = helpers.matchPrefix(body, customPrefix ? [customPrefix] : []);
-    if (!matchedPrefix) return;
+    const hit = prefixLib.match(body, settingsSnapshot);
+    if (!hit) return;
 
-    const args = body.slice(matchedPrefix.length).trim().split(/\s+/);
+    const args = hit.rest.trim().split(/\s+/);
     const commandName = args.shift().toLowerCase();
     if (!commandName) return;
     const command = this.commands.get(commandName);
 
     if (command) {
+      // Commands are written against "."; whatever prefix was typed, they get a "."-form copy of the message,
+      // and everything they send shows the REAL prefix (see utils/prefix.js).
+      const shown = prefixLib.display(settingsSnapshot);
+      if (hit.prefix !== ".") m = prefixLib.canonicalMessage(m, hit.rest);
+      sock = prefixLib.withDisplayPrefix(sock, shown, this.names());
       // Runtime info commands may need (like the total command count) is
       // injected here via context, rather than a command file require()ing
       // commandHandler itself — that created a circular dependency.
@@ -64,7 +75,8 @@ class CommandHandler {
         commandCount: this.commands.size,
         primaryCount: this.getPrimaryCount(),
         registry: this.commands,
-        prefix: matchedPrefix,
+        prefix: shown,
+        commandName,
         botName: config.botName
       };
       try {
