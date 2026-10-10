@@ -1,6 +1,6 @@
 // src/commands/yt.js
 const downloaders = require("../services/downloaders");
-const { runDownload, readFile } = require("../utils/downloadUx");
+const { runDownload, readFile, videoMime } = require("../utils/downloadUx");
 const { panel } = require("../utils/ui");
 
 module.exports = {
@@ -21,7 +21,7 @@ module.exports = {
       title: "🎬 VIDEO DOWNLOAD",
       intro: detected ? ["📥 Fetching media..."] : ["🔎 Searching for:", `"${query}"`],
       fetch: () => (detected ? downloaders.downloadVideoFromUrl(detected.url) : downloaders.searchAndDownloadVideo(query)),
-      message: (r) => ({ video: readFile(r.filePath), caption: `🎬 ${r.title}` }),
+      message: (r) => ({ video: readFile(r.filePath), caption: `🎬 ${r.title}`, ...(r.format && r.format !== "mp4" ? { mimetype: videoMime(r.format) } : {}) }),
       failText: "Couldn't download that."
     });
   }

@@ -3,7 +3,7 @@
 // The official Meta Graph API scaffold (services/instagram.js) is kept for
 // whatever legitimate official-API use you add later — see .igstatus.
 const downloaders = require("../services/downloaders");
-const { runDownload, readFile } = require("../utils/downloadUx");
+const { runDownload, readFile, videoMime } = require("../utils/downloadUx");
 const { panel } = require("../utils/ui");
 
 module.exports = {
@@ -24,7 +24,7 @@ module.exports = {
       title: "📸 INSTAGRAM DOWNLOAD",
       intro: ["📥 Fetching media...", "🎬 Processing video..."],
       fetch: () => downloaders.downloadVideoFromUrl(detected.url),
-      message: (r) => ({ video: readFile(r.filePath), caption: `📸 ${r.title}` }),
+      message: (r) => ({ video: readFile(r.filePath), caption: `📸 ${r.title}`, ...(r.format && r.format !== "mp4" ? { mimetype: videoMime(r.format) } : {}) }),
       failText: "Couldn't download that Instagram post (it may be private)."
     });
   }
